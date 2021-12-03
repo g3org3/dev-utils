@@ -2,34 +2,55 @@
 import argparse
 import os
 import re
+import signal
+import sys
+import yaml
 import requests as r
 import subprocess
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
+from emoji import emojize
 from termcolor import colored
-from typing import Optional
 
 
 @dataclass
 class Env:
-  VERSION: str
-  SESSION: Optional[str] = None
+  environment: any
+  VERSION: str = "v0.1.1"
+
+  @property
+  def jira_host(self):
+    return self.environment.get('jira').get('host')
+
+  @property
+  def jira_session(self):
+    return self.environment.get('jira').get('session')
+
+  @property
+  def github_host(self):
+    return self.environment.get('github').get('host')
+
+  @property
+  def github_main_branch(self):
+    return self.environment.get('github').get('main_branch')
+
+  @property
+  def github_repo(self):
+    return self.environment.get('github').get('repo')
+
+  def __str__(self):
+    return yaml.dump(self.environment, Dumper=yaml.Dumper)
 
 def get_env(args: Namespace):
-  env = {"SESSION": None, "VERSION": "0.1.0"}
+  env = {"jira": {"host": "api.atlassian.com"}, "github": {"host": "github.com", "main_branch": "main"}}
   home = os.environ['HOME']
-  config_path = f'{home}/.jarc'
+  config_path = f'{home}/.jarc.yml'
   if os.path.isfile(config_path):
     with open(config_path) as fh:
-      for line in fh.readlines():
-        if '=' in line:
-          key = line.split('=')[0].strip()
-          value = line.split('=')[1].strip()
-          env[key] = value
+      env = yaml.load(fh, yaml.Loader)
   else:
-    if args.verbose:
-      print("no config file found")
-  return Env(env['VERSION'], env['SESSION'])
+    print(colored("No config file found at ~/.jarc.yml", "yellow"))
+  return Env(env)
 
 
 def main():
@@ -78,7 +99,8 @@ def main():
   # )
   args = parser.parse_args()
   env = get_env(args)
-  cli = Cli(args, env)
+  jira = JiraApi(env, args)
+  cli = Cli(args, env, jira)
   cli.run(parser)
 
 
@@ -92,35 +114,39 @@ def get_branch(args: Namespace) -> str:
   return branch
 
 
-def get_branch_and_details(args: Namespace):
+def get_ticket_from_branch(args: Namespace):
   branch = get_branch(args)
-  branch_pattern = re.compile('^s([0-9])+/CFCCON-([0-9]+)_?((_?[a-zA-Z0-9]+)*)')
+  valid_branch_regex = r'^(s[0-9]+\/)?([A-Z]+-[0-9]+)(-\w+)?'
+  branch_pattern = re.compile(valid_branch_regex)
   result = branch_pattern.search(branch)
   if not result:
-    print("Could not get details from your branch")
+    print(colored("Could not get details from your branch", "yellow"))
     exit(1)
-  (sprint, ticket, desc, extra) = result.groups()
+  (sprint, ticket, desc) = result.groups()
+
   if args.verbose:
     print(f"sprint-number: [{colored(sprint, 'green')}]")
     print(f"ticket-id: [{colored(ticket, 'green')}]")
 
-  return (branch, ticket, sprint)
+  return (branch, ticket)
 
 
 @dataclass
 class JiraApi:
   args: Namespace
+  host: str
   cookies = {"JSESSIONID": None}
   proxies = {"https": None, "http": None}
   headers = {"user-agent": "curl/7.8.12"}
 
-  def __init__(self, jsessionid: str, args: Namespace) -> None:
+  def __init__(self, env: Env, args: Namespace) -> None:
     os.environ['NO_PROXY'] = '*'
-    self.cookies['JSESSIONID'] = jsessionid
+    self.cookies['JSESSIONID'] = env.jira_session
+    self.host = env.jira_host
     self.args = args
 
   def get(self, endpoint):
-    url = f'https://jiradbg.deutsche-boerse.de{endpoint}'
+    url = f'https://{self.host}{endpoint}'
     res = r.get(url, proxies=self.proxies, cookies=self.cookies, headers=self.headers)
     if res.status_code != 200:
       if self.args.verbose:
@@ -134,10 +160,11 @@ class JiraApi:
 class Cli:
   args: Namespace
   env: Env
+  jira: JiraApi
 
   def run(self, parser: ArgumentParser):
     if self.args.verbose:
-      print(f"{self.args}\n{self.env}")
+      print(f"{self.args}\n\n{self.env}")
 
     if self.args.create_pr:
       self.create_pr()
@@ -145,21 +172,28 @@ class Cli:
       self.how()
     elif self.args.open:
       self.open()
+    elif self.args.verbose:
+      pass
     else:
       parser.print_help()
 
   def open(self):
-    (branch, ticket, sprint) = get_branch_and_details(self.args)
+    (branch, ticket) = get_ticket_from_branch(self.args)
     url = None
-    if self.args.open == 'jira':
+    if self.args.open == 'j':
       url = (
-        "https://jiradbg.deutsche-boerse.de/secure/RapidBoard.jspa"
-        f"?rapidView=2704&view=detail&selectedIssue=CFCCON-{ticket}"
+        f"https://{self.env.jira_host}/secure/RapidBoard.jspa"
+        f"?rapidView=2704&view=detail&selectedIssue={ticket}"
+      )
+    elif self.args.open == 'jira':
+      url = (
+        f"https://{self.env.jira_host}/browse/"
+        f"{ticket}"
       )
     elif self.args.open == 'pr':
       url = (
-        "https://github.deutsche-boerse.de/"
-        "dev/cs.cfc_connect/compare/release/2204...dev:"
+        f"https://{self.env.github_host}/"
+        f"{self.env.github_repo}/compare/{self.env.github_main_branch}...dev:"
         f"{branch}"
       )
     else:
@@ -170,36 +204,51 @@ class Cli:
       os.system(f'xdg-open "{url}"')
 
   def how(self):
-    (branch, ticket, sprint) = get_branch_and_details(self.args)
-    if self.env.SESSION:
-      jira = JiraApi(self.env.SESSION, self.args)
-      r = jira.get(f'/rest/api/2/issue/CFCCON-{ticket}?fields=summary,description')
-      summary = r['fields']['summary']
-      description = r['fields']['description']
-      print(summary)
-      print(description)
+    (branch, ticket) = get_ticket_from_branch(self.args)
+    r = self.jira.get(f'/rest/api/2/issue/{ticket}?fields=summary,description')
+    if r is None:
+      exit(1)
+    summary = r['fields']['summary']
+    description = r['fields']['description']
+    print(f"\n{emojize(':memo:')} {summary}")
+    print("-")
+    print(description)
 
 
   def create_pr(self):
-    (branch, ticket, sprint) = get_branch_and_details(self.args)
+    (branch, ticket) = get_ticket_from_branch(self.args)
     link = (
-      "https://github.deutsche-boerse.de/"
-      "dev/cs.cfc_connect/compare/release/2204...dev:"
+      f"https://{self.env.github_host}/"
+      f"{self.env.github_repo}/compare/{self.env.github_main_branch}...dev:"
       f"{branch}"
     )
 
-    print("Pull Request")
+    response = self.jira.get(f'/rest/api/2/issue/{ticket}?fields=summary')
 
-    if self.env.SESSION:
-      jira = JiraApi(self.env.SESSION, self.args)
-      r = jira.get(f'/rest/api/2/issue/CFCCON-{ticket}?fields=summary')
+    print("\nPull Request")
+
+    if response:
       summary = r['fields']['summary']
       name = f"[#{ticket}] - {summary}"
       os.system(f'echo {name} | xclip -i -selection clipboard')
       print(f"name: {colored(name, 'yellow')} # copied to your clipboard!")
+
     print(f"link: {link}")
+    press_enter_to('open in browser', link)
+
+
+def press_enter_to(message = "continue", link=None):
+  print(f"[press enter to {message} ]")
+  input()
+  if link:
     os.system(f'xdg-open "{link}"')
 
 
+def signal_handler(sig, frame):
+  print('')
+  sys.exit(0)
+
+
 if __name__ == "__main__":
+  signal.signal(signal.SIGINT, signal_handler)
   main()
