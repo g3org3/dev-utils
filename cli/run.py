@@ -105,13 +105,20 @@ def main():
 
 
 def get_branch(args: Namespace) -> str:
-  result = subprocess.Popen('git rev-parse --abbrev-ref HEAD'.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  branch = result.stdout.read().decode().strip()
-  if result.stderr.read().decode().strip() != '':
+  (error, branch) = shell('git rev-parse --abbrev-ref HEAD')
+  if error:
     if args.verbose:
       print(f"branch-name: [{colored('failed', 'red')}]")
     exit(1)
   return branch
+
+
+def shell(cmd: str):
+  result = subprocess.Popen(cmd.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  output = result.stdout.read().decode().strip()
+  error = result.stderr.read().decode().strip()
+  error = None if error == "" else error
+  return (error, output)
 
 
 def get_ticket_from_branch(args: Namespace):
@@ -228,25 +235,41 @@ class Cli:
     print("\nPull Request")
 
     if response:
-      summary = r['fields']['summary']
-      name = f"[#{ticket}] - {summary}"
-      os.system(f'echo {name} | xclip -i -selection clipboard')
+      summary = response['fields']['summary']
+      name = f"[{ticket}] - {summary}"
+      copy_to_clipboard(name)
       print(f"name: {colored(name, 'yellow')} # copied to your clipboard!")
 
     print(f"link: {link}")
-    press_enter_to('open in browser', link)
-
-
-def press_enter_to(message = "continue", link=None):
-  print(f"[press enter to {message} ]")
-  input()
-  if link:
-    os.system(f'xdg-open "{link}"')
+    open_link(link, press_enter_message=True)
 
 
 def signal_handler(sig, frame):
   print('')
   sys.exit(0)
+
+
+def open_link(link, press_enter_message=False):
+  if press_enter_message:
+    print(f"[press enter to open in browser ]")
+    input()
+  (error, machine) = shell('uname -s')
+  if not error and machine == 'Linux':
+    os.system(f'xdg-open "{link}"')
+  elif not error and machine == 'Darwin':
+    os.system(f'open "{link}"')
+  else:
+    print(f'could not detect your OS machine:[{machine}] error:[{error}]')
+
+
+def copy_to_clipboard(text):
+  (error, machine) = shell('uname -s')
+  if not error and machine == 'Linux':
+    os.system(f'echo -e "{text}" | xclip -i -selection clipboard')
+  elif not error and machine == 'Darwin':
+    os.system(f'echo -e "{text}" | pbcopy')
+  else:
+    print(f'could not detect your OS machine:[{machine}] error:[{error}]')
 
 
 if __name__ == "__main__":
