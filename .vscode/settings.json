@@ -1,0 +1,4 @@
+{
+    "cornflakes.linter.executablePath": "./.direnv/python-3.8.0/bin/flake8",
+    "cornflakes.linter.run": "onType"
+}

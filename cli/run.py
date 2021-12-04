@@ -2,11 +2,11 @@
 import argparse
 import os
 import re
+import requests as r
 import signal
+import subprocess
 import sys
 import yaml
-import requests as r
-import subprocess
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from emoji import emojize
@@ -41,6 +41,7 @@ class Env:
   def __str__(self):
     return yaml.dump(self.environment, Dumper=yaml.Dumper)
 
+
 def get_env(args: Namespace):
   env = {"jira": {"host": "api.atlassian.com"}, "github": {"host": "github.com", "main_branch": "main"}}
   home = os.environ['HOME']
@@ -66,8 +67,8 @@ def main():
     action="store_true"
   )
   parser.add_argument(
-    "--how",
-    help="Fetches the description from the jira ticket",
+    "--desc", "-d",
+    help="Fetches the description from the ticket",
     action="store_true"
   )
   parser.add_argument(
@@ -175,8 +176,8 @@ class Cli:
 
     if self.args.create_pr:
       self.create_pr()
-    elif self.args.how:
-      self.how()
+    elif self.args.desc:
+      self.desc()
     elif self.args.open:
       self.open()
     elif self.args.verbose:
@@ -210,7 +211,7 @@ class Cli:
         print(url)
       os.system(f'xdg-open "{url}"')
 
-  def how(self):
+  def desc(self):
     (branch, ticket) = get_ticket_from_branch(self.args)
     r = self.jira.get(f'/rest/api/2/issue/{ticket}?fields=summary,description')
     if r is None:
@@ -218,9 +219,8 @@ class Cli:
     summary = r['fields']['summary']
     description = r['fields']['description']
     print(f"\n{emojize(':memo:')} {summary}")
-    print("-")
-    print(description)
-
+    print("")
+    print(emojize(description))
 
   def create_pr(self):
     (branch, ticket) = get_ticket_from_branch(self.args)
@@ -251,7 +251,7 @@ def signal_handler(sig, frame):
 
 def open_link(link, press_enter_message=False):
   if press_enter_message:
-    print(f"[press enter to open in browser ]")
+    print("[press enter to open in browser ]")
     input()
   (error, machine) = shell('uname -s')
   if not error and machine == 'Linux':
