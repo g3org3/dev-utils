@@ -1,28 +1,41 @@
 # dev-utls
 
-### Install
+## 1. Dependencies
+
+### 1.1 pyenv
+
+- https://github.com/pyenv/pyenv#installation
+
+### 1.2 direnv
+
+- https://direnv.net/docs/installation.html
+
+## 2. Installation
+
+### 2.1 Setup Aliases
 
 ```sh
-# Add in your ~/.zshrc
-alias cfc='cd ~/code/cs.cfc_connect'
-alias devutils='cd ~/code/dev-utils'
-alias ja='~/code/dev-utils/.direnv/python-3.8.0/bin/python ~/code/dev-utils/bin/ja'
+echo "alias devutils='cd ~/code/dev-utils'" >> ~/.zshrc
+echo "alias ja='~/code/dev-utils/.direnv/python-3.8.0/bin/python ~/code/dev-utils/bin/ja'" >> ~/.zshrc
 ```
+
+### 2.2 Install pythhon version
 
 ```sh
 pyenv install 3.8.0
-# if this fails then
-sudo apt install -y build-essential libssl-dev libffi-dev python3-dev
-
-# after success do
-git clone
-cd dev-utils
-direnv allow
-pip install -r requirements.txt
-# done
 ```
 
-### Usage
+### 2.3 Clone and install project dependencies
+
+```sh
+git clone git@github.com:g3org3/dev-utils.git ~/code/dev-utils
+cd ~/code/dev-utils
+
+direnv allow
+pip install -r requirements.txt
+```
+
+## 3. Usage
 
 ```sh
 usage: ja [-h] [--verbose] [--create-pr] [--how] [--open OPEN]
