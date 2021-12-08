@@ -39,15 +39,5 @@ pip install -r requirements.txt
 ## 3. Usage
 
 ```sh
-usage: ja [-h] [--verbose] [--create-pr] [--how] [--open OPEN]
-
-Dev cli helper
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --verbose, -v         Show more information
-  --create-pr, -c       Generate link to create a PR to be merged on the
-                        latest release branch
-  --how                 Fetches the description from the jira ticket
-  --open OPEN, -o OPEN  Open either github or jira
+ja
 ```
