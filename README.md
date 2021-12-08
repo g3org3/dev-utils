@@ -35,7 +35,9 @@ pyenv install 3.8.2
 ```sh
 git clone git@github.com:g3org3/dev-utils.git ~/code/dev-utils
 cd ~/code/dev-utils
+```
 
+```sh
 direnv allow
 pip install -r requirements.txt
 ```
