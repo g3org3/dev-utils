@@ -19,7 +19,7 @@ echo "alias devutils='cd ~/code/dev-utils'" >> ~/.zshrc
 echo "alias ja='~/code/dev-utils/.direnv/python-3.8.2/bin/python ~/code/dev-utils/bin/ja'" >> ~/.zshrc
 ```
 
-### 2.2 Install pythhon version
+### 2.2 Install python version
 
 ```sh
 sud pwd
