@@ -265,7 +265,7 @@ class Cli:
       (err, output) = shell('git pull origin master', cwd=dev_utils_path)
       print("Installing dependencies")
       shell(f'{pip} install -r requirements.txt')
-      print(f'status [{colored("done")}]')
+      print(f'status [{colored("done", "green")}]')
 
   def open(self):
     (branch, ticket) = get_ticket_from_branch(self.args, self.env)
