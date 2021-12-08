@@ -52,8 +52,8 @@ class Env:
   def __str__(self):
     return yaml.dump(self.environment, Dumper=yaml.Dumper, sort_keys=False)
 
-home = os.environ['HOME']
-GLOBAL_CONFIG_PATH = f'{home}/.jarc.yml'
+HOME = os.environ['HOME']
+GLOBAL_CONFIG_PATH = f'{HOME}/.jarc.yml'
 
 def get_env(args: Namespace) -> Env:
   env = {
@@ -157,11 +157,19 @@ def get_branch(args: Namespace) -> str:
   return branch
 
 
-def shell(cmd: str):
-  result = subprocess.Popen(cmd.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def shell(cmd: str, cwd=None, err_exit=False):
+  result = subprocess.Popen(cmd.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
   output = result.stdout.read().decode().strip()
   error = result.stderr.read().decode().strip()
   error = None if error == "" else error
+
+  if err_exit and error:
+    print(colored(error, 'red'))
+    exit(1)
+
+  if err_exit and not error:
+    return output
+
   return (error, output)
 
 
@@ -241,10 +249,23 @@ class Cli:
       self.branch()
     elif self.args.save_session:
       self.save_session()
+    elif self.args.update:
+      self.update()
     elif self.args.verbose:
       pass
     else:
       parser.print_help()
+
+  def update(self):
+    pip = f'{HOME}/code/dev-dev-utils/.direnv/python-3.8.2/bin/pip'
+    dev_utils_path = f'{HOME}/code/dev-utils'
+    output = shell('git status --porcelain', cwd=dev_utils_path, err_exit=True)
+    if output == "":
+      print("Pulling latest changes")
+      output = shell('git pull origin master', cwd=dev_utils_path, err_exit=True)
+      print("Installing dependencies")
+      shell(f'{pip} install -r requirements.txt')
+      print(f'status [{colored("done")}]')
 
   def open(self):
     (branch, ticket) = get_ticket_from_branch(self.args, self.env)
@@ -307,11 +328,7 @@ class Cli:
       print(f'{colored(updated, "blue")} {display_name}: {body}')
 
   def branch(self):
-    (err, output) = shell('git branch')
-    if err:
-      print(colored(err, 'red'))
-      exit(1)
-
+    output = shell('git branch', err_exit=True)
     branches = [''.join(branch.split('*')).strip() for branch in output.split('\n')]
     if self.args.branch != '*':
       branches = [branch for branch in branches if self.args.branch in branch]
@@ -320,11 +337,9 @@ class Cli:
     ]
     answers = inquirer.prompt(questions)
     branch = answers.get('branch')
-    (err, output) = shell('git status --porcelain --untracked-files=no')
+    output = shell('git status --porcelain --untracked-files=no', err_exit=True)
     if output=="":
-      shell(f"git checkout {branch}")
-    elif err:
-       print(colored(err, 'red'))
+      shell(f"git checkout {branch}", err_exit=True)
     else:
       print(colored('Expected clean directory, please commit or stash your pending changes', 'yellow'))
       print(output)
