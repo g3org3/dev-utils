@@ -116,7 +116,7 @@ def main():
   parser.add_argument(
     "--version",
     action="version",
-    version='%(prog)s 0.2.0'
+    version='%(prog)s 0.3.0'
   )
   # parser.add_argument(
   #   "--rebase", "-r",
@@ -257,12 +257,12 @@ class Cli:
       parser.print_help()
 
   def update(self):
-    pip = f'{HOME}/code/dev-dev-utils/.direnv/python-3.8.2/bin/pip'
     dev_utils_path = f'{HOME}/code/dev-utils'
+    pip = f'{dev_utils_path}/.direnv/python-3.8.2/bin/pip'
     output = shell('git status --porcelain', cwd=dev_utils_path, err_exit=True)
     if output == "":
       print("Pulling latest changes")
-      output = shell('git pull origin master', cwd=dev_utils_path, err_exit=True)
+      (err, output) = shell('git pull origin master', cwd=dev_utils_path)
       print("Installing dependencies")
       shell(f'{pip} install -r requirements.txt')
       print(f'status [{colored("done")}]')
