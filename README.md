@@ -1,4 +1,4 @@
-# dev-utls
+# dev-utils
 
 ## 1. Dependencies
 
