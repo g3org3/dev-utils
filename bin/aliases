@@ -29,9 +29,9 @@ alias cddotfiles=cd\ ~/.dotfiles
 
 
 ## Functions
-cs() { cd "$1" && clear && la; }
+cs() { cd "$1" && clear && tree -L 1; }
 
-back() { cd .. && clear && la; }
+back() { cd .. && clear && tree -L 1; }
 
 count_commits() {
     BRANCH=${1:-'master'}
