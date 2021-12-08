@@ -1,20 +1,39 @@
+#!/bin/bash
+
 alias l=ls\ -l
-alias la=ls\ -la
+alias la=ls\ -lA
 
 
+## Git
 alias gis=git\ status
 alias gic=git\ checkout
 alias gib=git\ branch
 alias push=git\ push
 alias pull=git\ pull
 alias fetch=git\ fetch
+alias undo-commit="git reset --soft HEAD~1"
+alias glog="git log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
 
 
+## Docker
 alias dc=docker-compose
 
 
+## Extras
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
 
+## Specific for this repo
 alias ja='~/code/dev-utils/.direnv/python-3.8.2/bin/python ~/code/dev-utils/bin/ja'
 alias cddotfiles=cd\ ~/.dotfiles
+
+
+## Functions
+cs() { cd "$1" && clear && la; }
+
+back() { cd .. && clear && la; }
+
+count_commits() {
+    BRANCH=${1:-'master'}
+    git rev-list $BRANCH.. --count
+}
