@@ -22,8 +22,11 @@ echo "alias ja='~/code/dev-utils/.direnv/python-3.8.2/bin/python ~/code/dev-util
 ### 2.2 Install python version
 
 ```sh
-sud pwd
+sudo pwd
 sudo apt install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev wget
+```
+
+```sh
 pyenv install 3.8.2
 ```
 
