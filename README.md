@@ -16,13 +16,13 @@
 
 ```sh
 echo "alias devutils='cd ~/code/dev-utils'" >> ~/.zshrc
-echo "alias ja='~/code/dev-utils/.direnv/python-3.8.0/bin/python ~/code/dev-utils/bin/ja'" >> ~/.zshrc
+echo "alias ja='~/code/dev-utils/.direnv/python-3.8.2/bin/python ~/code/dev-utils/bin/ja'" >> ~/.zshrc
 ```
 
 ### 2.2 Install pythhon version
 
 ```sh
-pyenv install 3.8.0
+pyenv install 3.8.2
 ```
 
 ### 2.3 Clone and install project dependencies
