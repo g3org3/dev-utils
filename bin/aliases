@@ -30,17 +30,21 @@ alias cddotfiles=cd\ ~/.dotfiles
 
 ## Functions
 cs() {
-    DIR=${1:-.}
-    LEVEL=${2:-1}
-    cd "$DIR" && clear && tree -L "$LEVEL";
+	DIR=${1:-.}
+	LEVEL=${2:-1}
+	cd "$DIR" && clear && tree -L "$LEVEL";
 }
 
 back() {
-    LEVEL=${1:-1}
-    cd .. && clear && tree -L "$LEVEL";
+	LEVEL=${1:-1}
+	cd .. && clear && tree -L "$LEVEL";
 }
 
 count_commits() {
-    BRANCH=${1:-'master'}
-    git rev-list "$BRANCH".. --count
+	BRANCH=${1:-'master'}
+	git rev-list "$BRANCH".. --count
+}
+
+pbcopy() {
+	xclip -i -selection clipboard $1;
 }
