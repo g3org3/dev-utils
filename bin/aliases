@@ -45,6 +45,6 @@ count_commits() {
 	git rev-list "$BRANCH".. --count
 }
 
-pbcopy() {
+copy() {
 	xclip -i -selection clipboard $1;
 }
