@@ -1,20 +1,19 @@
 #!/usr/bin/env python
 import argparse
-import json
+import inquirer
 import os
 import re
-from typing import Tuple
 import requests as r
 import signal
 import subprocess
 import sys
 import yaml
-import inquirer
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
-from emoji import emojize
 from datetime import datetime
+from emoji import emojize
 from termcolor import colored
+from typing import Tuple
 
 
 @dataclass
@@ -29,6 +28,10 @@ class Env:
   @property
   def jira_session(self):
     return self.environment.get('jira').get('session')
+
+  @property
+  def jira_remember_me(self):
+    return self.environment.get('jira').get('remember_me')
 
   @property
   def jira_project_key(self):
@@ -49,6 +52,9 @@ class Env:
   def set_session(self, value):
     self.environment['jira']['session'] = value
 
+  def set_remember_me(self, value):
+    self.environment['jira']['remember_me'] = value
+
   def __str__(self):
     return yaml.dump(self.environment, Dumper=yaml.Dumper, sort_keys=False)
 
@@ -58,7 +64,7 @@ GLOBAL_CONFIG_PATH = f'{HOME}/.jarc.yml'
 def get_env(args: Namespace) -> Env:
   env = {
     "version": "1",
-    "jira": {"host": "api.atlassian.com", "session": "", "project_key": ""},
+    "jira": {"host": "api.atlassian.com", "session": "", "remember_me": "", "project_key": ""},
     "github": {"host": "github.com", "main_branch": "main", "repo": ""}
   }
 
@@ -101,6 +107,11 @@ def main():
     const='*',
   )
   parser.add_argument(
+    "--all", "-a",
+    help="All",
+    action="store_true"
+  )
+  parser.add_argument(
     "--jira_ticket", "-j",
     help="specify the jira ticket to avoid reading the branch name"
   )
@@ -118,29 +129,6 @@ def main():
     action="version",
     version='%(prog)s 0.3.0'
   )
-  # parser.add_argument(
-  #   "--rebase", "-r",
-  #   help="Rebase current branch with the latest release branch",
-  #   action="store_true"
-  # )
-  # parser.add_argument(
-  #   "--create-branch", "-b",
-  #   help="Create new branch",
-  # )
-  # parser.add_argument(
-  #   "--undo-commit", "-u",
-  #   help="Undo the latest commit",
-  #   action="store_true"
-  # )
-  # parser.add_argument(
-  #   "--open-pr-in-browser", "-o",
-  #   help="Open the PR of current branch",
-  #   action="store_true"
-  # )
-  # parser.add_argument(
-  #   "--new-jira-ticket", "-j",
-  #   help="Create new jra ticket in backlog",
-  # )
   args = parser.parse_args()
   env = get_env(args)
   jira = JiraApi(env, args)
@@ -186,7 +174,7 @@ def get_ticket_from_branch(args: Namespace, env: Env) -> Tuple[str, str]:
         if args.verbose:
           print(f"sprint-number: [{colored(sprint, 'green')}]")
           print(f"ticket-id: [{colored(ticket, 'green')}]")
-        return (sprint, ticket)
+        return (ticket, ticket)
 
   branch = get_branch(args)
   valid_branch_regex = r'(s[0-9]+\/)?([A-Z]+-[0-9]+)(-\w+)?'
@@ -215,6 +203,8 @@ class JiraApi:
   def __init__(self, env: Env, args: Namespace) -> None:
     os.environ['NO_PROXY'] = '*'
     self.cookies['JSESSIONID'] = env.jira_session
+    if env.jira_remember_me:
+      self.cookies['seraph.rememberme.cookie'] = env.jira_remember_me
     self.host = env.jira_host
     self.args = args
 
@@ -294,14 +284,17 @@ class Cli:
       os.system(f'xdg-open "{url}"')
 
   def save_session(self):
-    self.env.set_session(self.args.save_session)
+    if '%3A' in self.args.save_session:
+      self.env.set_remember_me(self.args.save_session)
+    else:
+      self.env.set_session(self.args.save_session)
     with open(GLOBAL_CONFIG_PATH, 'w') as fh:
       fh.write(f"{self.env}")
       print(f"update rc [{colored('done', 'green')}]")
 
   def desc(self):
     (branch, ticket) = get_ticket_from_branch(self.args, self.env)
-    r = self.jira.get(f'/rest/api/2/issue/{ticket}?') #fields=summary,description
+    r = self.jira.get(f'/rest/api/2/issue/{ticket}?') #fields=summary,description,customfield_10006,customfield_11100
     if r is None:
       exit(1)
     summary = r['fields']['summary']
@@ -328,8 +321,11 @@ class Cli:
       print(f'{colored(updated, "blue")} {display_name}: {body}')
 
   def branch(self):
-    output = shell('git branch', err_exit=True)
+    if self.args.all:
+      shell('git fetch -a')
+    output = shell('git branch -a', err_exit=True) if self.args.all else shell('git branch', err_exit=True)
     branches = [''.join(branch.split('*')).strip() for branch in output.split('\n')]
+    branches = [''.join(b.split('remotes/origin/')).strip() for b in branches]
     if self.args.branch != '*':
       branches = [branch for branch in branches if self.args.branch in branch]
     questions = [
