@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from emoji import emojize
 from termcolor import colored
-from typing import Tuple
+from typing import Optional, Tuple
 
 
 @dataclass
@@ -147,8 +147,12 @@ def get_branch(args: Namespace) -> str:
 
 def shell(cmd: str, cwd=None, err_exit=False):
   result = subprocess.Popen(cmd.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
-  output = result.stdout.read().decode().strip()
-  error = result.stderr.read().decode().strip()
+  stdout = result.stdout
+  if not stdout:
+    return ("Empty", None)
+
+  output = stdout.read().decode().strip()
+  error: Optional[str] = stdout.read().decode().strip()
   error = None if error == "" else error
 
   if err_exit and error:
@@ -166,7 +170,7 @@ def get_ticket_from_branch(args: Namespace, env: Env) -> Tuple[str, str]:
     ticket_regex = r'([a-zA-Z]+)?-?([0-9]+)'
     ticket_pattern = re.compile(ticket_regex)
     result = ticket_pattern.search(args.jira_ticket)
-    if result.groups:
+    if result and result.groups:
       number = result.group(2)
       if number:
         sprint = None
@@ -350,16 +354,19 @@ class Cli:
 
     response = self.jira.get(f'/rest/api/2/issue/{ticket}?fields=summary,customfield_10006')
 
-    print("\nPull Request")
+    print("\n# Pull Request")
+    print(f"- link: {link}")
 
     if response:
       summary = response['fields']['summary']
       points = response['fields']['customfield_10006']
-      name = f"[{ticket}] - ({points}) {summary}"
+      id = ticket.split(f'{self.env.jira_project_key}-')[1]
+      points = points if points else 0
+      name = f"[#{id}] - ({points}) {summary}"
       copy_to_clipboard(name)
-      print(f"name: {colored(name, 'yellow')} # copied to your clipboard!")
+      print(f"- name: {colored(name, 'yellow')}")
+      print(colored('  # copied the name to your clipboard!', 'green'))
 
-    print(f"link: {link}")
     open_link(link, press_enter_message=True)
 
 
@@ -370,7 +377,7 @@ def signal_handler(sig, frame):
 
 def open_link(link, press_enter_message=False):
   if press_enter_message:
-    print("[press enter to open in browser ]")
+    print(colored("\n[press enter to open in browser]", 'blue'), end='')
     input()
   (error, machine) = shell('uname -s')
   if not error and machine == 'Linux':
@@ -378,15 +385,15 @@ def open_link(link, press_enter_message=False):
   elif not error and machine == 'Darwin':
     os.system(f'open "{link}"')
   else:
-    print(f'could not detect your OS machine:[{machine}] error:[{error}]')
+    print(colored(f'could not detect your OS machine:[{machine}] error:[{error}]', 'yellow'))
 
 
 def copy_to_clipboard(text):
   (error, machine) = shell('uname -s')
   if not error and machine == 'Linux':
-    os.system(f'echo -e "{text}" | xclip -i -selection clipboard')
+    os.system(f'echo "{text}" | xclip -i -selection clipboard')
   elif not error and machine == 'Darwin':
-    os.system(f'echo -e "{text}" | pbcopy')
+    os.system(f'echo "{text}" | pbcopy')
   else:
     print(f'could not detect your OS machine:[{machine}] error:[{error}]')
 
