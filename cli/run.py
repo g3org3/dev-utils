@@ -13,12 +13,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from emoji import emojize
 from termcolor import colored
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
 
 @dataclass
 class Env:
-  environment: any
+  environment: Dict[str, str]
   VERSION: str = "v0.1.1"
 
   @property
@@ -60,6 +60,7 @@ class Env:
 
 HOME = os.environ['HOME']
 GLOBAL_CONFIG_PATH = f'{HOME}/.jarc.yml'
+
 
 def get_env(args: Namespace) -> Env:
   env = {
@@ -245,9 +246,7 @@ class Cli:
       self.save_session()
     elif self.args.update:
       self.update()
-    elif self.args.verbose:
-      pass
-    else:
+    elif not self.args.verbose:
       parser.print_help()
 
   def update(self):
@@ -256,7 +255,7 @@ class Cli:
     output = shell('git status --porcelain', cwd=dev_utils_path, err_exit=True)
     if output == "":
       print("Pulling latest changes")
-      (err, output) = shell('git pull origin master', cwd=dev_utils_path)
+      shell('git pull origin master', cwd=dev_utils_path)
       print("Installing dependencies")
       shell(f'{pip} install -r requirements.txt')
       print(f'status [{colored("done", "green")}]')
@@ -298,31 +297,45 @@ class Cli:
 
   def desc(self):
     (branch, ticket) = get_ticket_from_branch(self.args, self.env)
-    r = self.jira.get(f'/rest/api/2/issue/{ticket}?') #fields=summary,description,customfield_10006,customfield_11100
+    r = self.jira.get(f'/rest/api/2/issue/{ticket}?') # fields=summary,description,customfield_10006,customfield_11100
     if r is None:
       exit(1)
     summary = r['fields']['summary']
-    description = r['fields']['description']
+    description = r['fields']['description'] if r['fields']['description'] else ''
     points = r['fields']['customfield_10006']
-    points = f'({points}) ' if points else ''
+    points = f"({points}) " if points else ''
     github = r['fields']['customfield_11100']
     pr_status = github.split(', details=PullRequestOverallDetails')[0].split('state=')[1]
-    pr_status = colored(f'{pr_status} ', 'yellow')
+    pr_status = f'PR:{pr_status} '
     comments = r['fields']['comment']
-    owner = None
+    owner = r['fields']['assignee']['displayName'] if r['fields'].get('assignee') else ''
+    epic = r['fields']['customfield_10003'] + ' ' if r['fields'].get('customfield_10003') else ''
 
     # for k in r['fields'].keys():
     #   print(f"{k}|| {r['fields'][k]}")
-    print(f"\n{emojize(':memo:')} {pr_status}{points}{summary}")
-    if owner:
-      print(f"owner: {owner}")
+    print(
+      f"\n{emojize(':memo:')} "
+      f"{colored(r['key'], 'red')} "
+      f"{colored(pr_status, 'yellow')}"
+      f"{colored(points, 'green')}"
+      f"{colored(epic, 'blue')}"
+      f"{colored(owner, 'blue')}"
+    )
+    print("   " + summary)
     print("")
+    description = f'{colored("How", "red")}'.join(description.split('How'))
+    description = f'{colored("How", "red")}'.join(description.split('how'))
+    description = f'{colored("Screen", "red")}'.join(description.split('Screen'))
+    description = f'{colored("Acceptance Criteria", "red")}'.join(description.split('Acceptance Criteria'))
+    description = f'{colored("Acceptance Criteria", "red")}'.join(description.split('Acceptance criteria'))
+    description = f'{colored("Acceptance Criteria", "red")}'.join(description.split('acceptance criteria'))
+    description = f'{colored("References", "red")}'.join(description.split('References'))
     print(emojize(description))
     for c in comments['comments']:
       display_name = c['author']['displayName']
       body = c['body']
       updated = datetime.strptime(c['updated'], '%Y-%m-%dT%H:%M:%S.%f%z').strftime('%Y-%m-%d %H:%M %z')
-      print(f'{colored(updated, "blue")} {display_name}: {body}')
+      print(f'\n{colored(updated, "blue")} {display_name}: {body}')
 
   def branch(self):
     if self.args.all:
