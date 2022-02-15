@@ -1,7 +1,7 @@
 #!/bin/bash
 
-alias l=ls\ -l
-alias la=ls\ -lA
+alias l=ls\ -lh
+alias la=ls\ -lAh
 
 
 ## Git
@@ -32,7 +32,7 @@ alias cddotfiles=cd\ ~/.dotfiles
 cs() {
 	DIR=${1:-.}
 	LEVEL=${2:-1}
-	cd "$DIR" && clear && tree -L "$LEVEL";
+  cd "$DIR" && clear && echo $(pwd) && tree -L "$LEVEL";
 }
 
 back() {
@@ -47,4 +47,18 @@ count_commits() {
 
 copy() {
 	xclip -i -selection clipboard $1;
+}
+
+function cd() {
+  builtin cd "$@";
+
+  if [ -f .env ]; then
+    pwd=$(pwd)
+
+    echo "ja: loading $pwd/.env";
+    export $(cat .env | grep "=" | xargs)
+
+    vars=$(cat .env | grep = | sed s.=.\ .g | awk '{print $1}' | sed -z 's/\n/\ +/g')
+    echo "ja: export +${vars}";
+  fi
 }
