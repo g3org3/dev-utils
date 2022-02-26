@@ -55,6 +55,18 @@ function cd() {
   if [ -f .env ]; then
     pwd=$(pwd)
 
+    exampledotenv=$(cat example.env | grep = | sed s.=.\ .g | awk '{print $1}')
+    dotenv=$(cat .env | grep = | sed s.=.\ .g | awk '{print $1}')
+    diffs=`diff <(echo "$exampledotenv") <(echo "$dotenv") -q`
+
+    if [ -n "$diffs" ]; then
+      echo -e "\n\e[31myour .env doesn't match with the example.env\nmake sure is up to date\e[0m"
+      echo -e "\n\e[33mupdating your .env\e[0m"
+      cp .env .env.bk
+      cat example.env | sed s.UID.$(id -u).g > .env
+      echo -e "\n.env \e[32mupdated\e[0m\n"
+    fi
+
     echo "ja: loading $pwd/.env";
     export $(cat .env | grep "=" | xargs)
 
