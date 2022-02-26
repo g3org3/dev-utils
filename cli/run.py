@@ -128,7 +128,7 @@ def main():
   parser.add_argument(
     "--version",
     action="version",
-    version='%(prog)s 0.3.0'
+    version='%(prog)s 0.4.0'
   )
   args = parser.parse_args()
   env = get_env(args)
