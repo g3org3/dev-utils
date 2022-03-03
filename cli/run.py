@@ -215,7 +215,7 @@ class JiraApi:
 
   def get(self, endpoint):
     url = f'https://{self.host}{endpoint}'
-    res = r.get(url, proxies=self.proxies, cookies=self.cookies, headers=self.headers)
+    res = r.get(url, proxies=self.proxies, cookies=self.cookies, headers=self.headers, verify=False)
     if res.status_code != 200:
       if self.args.verbose:
         print(colored(res.text, 'red'))
