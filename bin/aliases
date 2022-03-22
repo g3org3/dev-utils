@@ -69,10 +69,10 @@ function cd() {
       fi
     fi
 
-    echo "ja: loading $pwd/.env";
-    export $(cat .env | grep "=" | xargs)
+    #echo "ja: loading $pwd/.env";
+    #export $(cat .env | grep "=" | xargs)
 
-    vars=$(cat .env | grep = | sed s.=.\ .g | awk '{print $1}' | sed -z 's/\n/\ +/g')
-    echo "ja: export +${vars}";
+    #vars=$(cat .env | grep = | sed s.=.\ .g | awk '{print $1}' | sed -z 's/\n/\ +/g')
+    #echo "ja: export +${vars}";
   fi
 }
