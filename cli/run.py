@@ -375,7 +375,7 @@ class Cli:
       points = response['fields']['customfield_10006']
       id = ticket.split(f'{self.env.jira_project_key}-')[1]
       points = points if points else 0
-      name = f"[#{id}] - ({points}) {summary}"
+      name = f"[#{self.env.jira_project_key}-{id}] - ({points}) {summary}"
       copy_to_clipboard(name)
       print(f"- name: {colored(name, 'yellow')}")
       print(colored('  # copied the name to your clipboard!', 'green'))
