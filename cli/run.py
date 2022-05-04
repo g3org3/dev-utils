@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+from argparse import ArgumentParser, Namespace
+from dataclasses import dataclass
+from datetime import datetime
+from emoji import emojize
+from termcolor import colored
+from typing import Optional, Tuple, Dict
 import argparse
 import inquirer
 import os
@@ -7,13 +13,10 @@ import requests as r
 import signal
 import subprocess
 import sys
+import urllib3
 import yaml
-from argparse import ArgumentParser, Namespace
-from dataclasses import dataclass
-from datetime import datetime
-from emoji import emojize
-from termcolor import colored
-from typing import Optional, Tuple, Dict
+
+urllib3.disable_warnings()
 
 
 @dataclass
