@@ -27,7 +27,7 @@ sudo apt install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libns
 ```
 
 ```sh
-pyenv install 3.8.2
+pyenv install 3.9.7
 ```
 
 ### 2.3 Clone and install project dependencies
