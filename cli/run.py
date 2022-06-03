@@ -22,7 +22,7 @@ urllib3.disable_warnings()
 @dataclass
 class Env:
     environment: Dict[str, str]
-    VERSION: str = "v0.1.1"
+    VERSION: str = "v0.2.0"
 
     @property
     def jira_host(self):
@@ -97,6 +97,11 @@ def main():
         "--pr",
         "-p",
         help="Generate link to create a PR to be merged on the latest release branch",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--push",
+        help="will push your branch with set upstream ",
         action="store_true",
     )
     parser.add_argument(
@@ -254,6 +259,8 @@ class Cli:
             self.save_session()
         elif self.args.update:
             self.update()
+        elif self.args.push:
+            self.push()
         elif not self.args.verbose:
             parser.print_help()
 
@@ -390,6 +397,13 @@ class Cli:
                 )
             )
             print(output)
+
+    def push(self):
+        branch = get_branch(self.args)
+        push_branch_cmd = f"git push --set-upstream origin {branch}"
+        print(push_branch_cmd + "\n")
+        output = shell(push_branch_cmd, err_exit=True)
+        print(output)
 
     def pr(self):
         branch = get_branch(self.args)
