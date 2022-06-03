@@ -16,7 +16,7 @@
 
 ```sh
 echo "alias devutils='cd ~/code/dev-utils'" >> ~/.zshrc
-echo "alias ja='~/code/dev-utils/.direnv/python-3.8.2/bin/python ~/code/dev-utils/bin/ja'" >> ~/.zshrc
+echo "alias ja='~/code/dev-utils/.direnv/python-3.9.7/bin/python ~/code/dev-utils/bin/ja'" >> ~/.zshrc
 ```
 
 ### 2.2 Install python version
@@ -27,7 +27,7 @@ sudo apt install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libns
 ```
 
 ```sh
-pyenv install 3.8.2
+pyenv install 3.9.7
 ```
 
 ### 2.3 Clone and install project dependencies
