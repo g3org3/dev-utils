@@ -178,7 +178,12 @@ def get_ticket_from_branch(args: Namespace, env: Env) -> Tuple[str, str]:
             number = result.group(2)
             if number:
                 sprint = None
-                ticket = f"{env.jira_project_key}-{number}"
+                project_key = (
+                    env.jira_project_key
+                    if len(result.group(1)) == 1
+                    else result.group(1)
+                )
+                ticket = f"{project_key}-{number}"
                 if args.verbose:
                     print(f"sprint-number: [{colored(sprint, 'green')}]")
                     print(f"ticket-id: [{colored(ticket, 'green')}]")
@@ -315,8 +320,14 @@ class Cli:
         if r is None:
             exit(1)
         summary = r["fields"]["summary"]
-        description = r["fields"]["description"] if r["fields"]["description"] else ""
-        points = r["fields"]["customfield_10006"]
+        description = (
+            r["fields"]["description"] if r["fields"].get("description") else ""
+        )
+        points = (
+            r["fields"]["customfield_10006"]
+            if r["fields"].get("customfield_10006")
+            else ""
+        )
         points = f"({points}) " if points else ""
         github = r["fields"]["customfield_11100"]
         pr_status = github.split(", details=PullRequestOverallDetails")[0].split(
@@ -372,19 +383,22 @@ class Cli:
             print(f'\n{colored(updated, "blue")} {display_name}: {body}')
 
     def branch(self):
-        if self.args.all:
-            shell("git fetch -a")
-        output = (
-            shell("git branch -a", err_exit=True)
-            if self.args.all
-            else shell("git branch", err_exit=True)
-        )
+        shell("git fetch -a")
+        output = shell("git branch -a", err_exit=True)
         branches = ["".join(branch.split("*")).strip() for branch in output.split("\n")]
         branches = ["".join(b.split("remotes/origin/")).strip() for b in branches]
+        branches = list(set(branches))
+        branches.sort(key=lambda x: x, reverse=True)
+
         if self.args.branch != "*":
             branches = [branch for branch in branches if self.args.branch in branch]
+        if not branches:
+            print("no branches found")
+            exit()
         questions = [inquirer.List("branch", message="What branch?", choices=branches)]
         answers = inquirer.prompt(questions)
+        if not answers:
+            exit()
         branch = answers.get("branch")
         output = shell("git status --porcelain --untracked-files=no", err_exit=True)
         if output == "":
@@ -423,7 +437,11 @@ class Cli:
 
         if response:
             summary = response["fields"]["summary"]
-            points = response["fields"]["customfield_10006"]
+            points = (
+                response["fields"]["customfield_10006"]
+                if response["fields"].get("customfield_10006")
+                else ""
+            )
             points = points if points else 0
             name = f"[#{ticket}] - ({points}) {summary}"
             copy_to_clipboard(name)
