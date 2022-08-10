@@ -62,10 +62,14 @@ function cd() {
 
       if [ -n "$diffs" ]; then
         echo -e "\n\e[31myour .env doesn't match with the example.env\nmake sure is up to date\e[0m"
-        echo -e "\n\e[33mupdating your .env\e[0m"
+        echo -e "\nWant me to replace your .env with example.env ?  [or Ctrl-C]"
+        # echo `diff <(echo "$exampledotenv") <(echo "$dotenv")`
+        read $id
+        echo -e "\e[33m > creating backup: .env.bk\e[0m"
         cp .env .env.bk
+        echo -e "\e[33m > updating your  : .env\e[0m"
         cat example.env | sed s.UID.$(id -u).g > .env
-        echo -e "\n.env \e[32mupdated\e[0m\n"
+        echo -e "\n.env \e[32m[updated]\e[0m\n"
       fi
     fi
 
