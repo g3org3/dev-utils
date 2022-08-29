@@ -120,6 +120,7 @@ def main():
         nargs="?",
         const="*",
     )
+    parser.add_argument("--new", help="Start a new ticket")
     parser.add_argument("--all", "-a", help="All", action="store_true")
     parser.add_argument(
         "--jira_ticket",
@@ -266,6 +267,8 @@ class Cli:
             self.update()
         elif self.args.push:
             self.push()
+        elif self.create:
+            self.create()
         elif not self.args.verbose:
             parser.print_help()
 
@@ -289,7 +292,7 @@ class Cli:
                 f"?rapidView=2704&view=detail&selectedIssue={ticket}"
             )
         elif self.args.open == "jira":
-            url = f"https://{self.env.jira_host}/browse/" f"{ticket}"
+            url = f"https://{self.env.jira_host}/browse/{ticket}"
         elif self.args.open == "pr":
             url = (
                 f"https://{self.env.github_host}/"
@@ -418,6 +421,11 @@ class Cli:
         print(push_branch_cmd + "\n")
         output = shell(push_branch_cmd, err_exit=True)
         print(output)
+
+    def create(self):
+        # self.jira.get("/)
+        # response = self.jira.get(f"/rest/api/2/issue")
+        print("not implemented")
 
     def pr(self):
         branch = get_branch(self.args)

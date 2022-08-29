@@ -80,3 +80,7 @@ function cd() {
     #echo "ja: export +${vars}";
   fi
 }
+
+alias debt='grep --exclude-dir={coverage,.azurite-data,.db-data,.db-mysql-matomo-data,.direnv,.git,.matomo-html,.sonarqube-data,bkp,build,Makefile,node_modules,target} -rnw ~/code/cs.cfc_connect -e "@debt"'
+alias hacks='grep --exclude-dir={coverage,.azurite-data,.db-data,.db-mysql-matomo-data,.direnv,.git,.matomo-html,.sonarqube-data,bkp,build,Makefile,node_modules,target} -rnw ~/code/cs.cfc_connect -e "@hack"'
+alias ss='grep --exclude-dir={coverage,.azurite-data,.db-data,.db-mysql-matomo-data,.direnv,.git,.matomo-html,.sonarqube-data,bkp,build,Makefile,node_modules,target} -rnw ~/code/cs.cfc_connect -e '
