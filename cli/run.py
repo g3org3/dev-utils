@@ -274,7 +274,7 @@ class Cli:
 
     def update(self):
         dev_utils_path = f"{HOME}/code/dev-utils"
-        pip = f"{dev_utils_path}/.direnv/python-3.8.2/bin/pip"
+        pip = f"{dev_utils_path}/.direnv/python-3.9.7/bin/pip"
         output = shell("git status --porcelain", cwd=dev_utils_path, err_exit=True)
         if output == "":
             print("Pulling latest changes")
