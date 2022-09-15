@@ -24,7 +24,7 @@ alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo
 
 
 ## Specific for this repo
-alias ja='~/code/dev-utils/.direnv/python-3.8.2/bin/python ~/code/dev-utils/bin/ja'
+alias ja='~/code/dev-utils/.direnv/python-3.9.7/bin/python ~/code/dev-utils/bin/ja'
 alias cddotfiles=cd\ ~/.dotfiles
 
 
