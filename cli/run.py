@@ -41,6 +41,14 @@ class Env:
         return self.environment.get("jira").get("project_key")
 
     @property
+    def jira_user_id(self):
+        return self.environment.get("jira").get("user_id")
+
+    @property
+    def jira_board_id(self):
+        return self.environment.get('jira').get('board_id')
+
+    @property
     def github_host(self):
         return self.environment.get("github").get("host")
 
@@ -58,6 +66,12 @@ class Env:
     def set_remember_me(self, value):
         self.environment["jira"]["remember_me"] = value
 
+    def set_board_id(self, value):
+        self.environment["jira"]["board_id"] = value
+
+    def set_user_id(self, value):
+        self.environment["jira"]["user_id"] = value
+
     def __str__(self):
         return yaml.dump(self.environment, Dumper=yaml.Dumper, sort_keys=False)
 
@@ -74,6 +88,8 @@ def get_env(args: Namespace) -> Env:
             "session": "",
             "remember_me": "",
             "project_key": "",
+            "user_id": "",
+            "board_id": "",
         },
         "github": {"host": "github.com", "main_branch": "main", "repo": ""},
     }
@@ -120,7 +136,7 @@ def main():
         nargs="?",
         const="*",
     )
-    parser.add_argument("--new", help="Start a new ticket")
+    parser.add_argument("--new", help="Start a new ticket", action="store_true")
     parser.add_argument("--all", "-a", help="All", action="store_true")
     parser.add_argument(
         "--jira_ticket",
@@ -267,7 +283,7 @@ class Cli:
             self.update()
         elif self.args.push:
             self.push()
-        elif self.create:
+        elif self.args.new:
             self.create()
         elif not self.args.verbose:
             parser.print_help()
@@ -307,7 +323,11 @@ class Cli:
             os.system(f'xdg-open "{url}"')
 
     def save_session(self):
-        if "%3A" in self.args.save_session:
+        if "b:" == self.args.save_session[0:2]:
+            self.env.set_board_id(self.args.save_session[2:])
+        elif "u:" == self.args.save_session[0:2]:
+            self.env.set_user_id(self.args.save_session[2:])
+        elif "%3A" in self.args.save_session:
             self.env.set_remember_me(self.args.save_session)
         else:
             self.env.set_session(self.args.save_session)
@@ -423,9 +443,60 @@ class Cli:
         print(output)
 
     def create(self):
-        # self.jira.get("/)
-        # response = self.jira.get(f"/rest/api/2/issue")
-        print("not implemented")
+        if not self.env.jira_user_id or not self.env.jira_board_id:
+          print("you are missing either the user_id and/or the jira_board_id")
+          print("to save the user id: `ja -s u:ab123`")
+          print("to save the board id: `ja -s b:7192`")
+          exit()
+        res = self.jira.get(
+            f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint?state=active"
+        )
+        sprint = res['values'][0]
+        sprint_id = sprint.get('id')
+        sprint_name = sprint.get('name')
+        sprint_number = sprint_name.split(' ')[1]
+        jql = (
+          'project = CFCCON '
+          'AND status = "To Develop" '
+          'AND resolution = Unresolved '
+          f'AND assignee in ({self.env.jira_user_id}) '
+          'ORDER BY priority DESC, updated DESC'
+        )
+        res = self.jira.get(
+            f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint/{sprint_id}/issue?jql={jql}"
+        )
+        issues = res['issues']
+        if not issues:
+          jql = (
+            'project = CFCCON '
+            'AND status = "To Do" '
+            'AND resolution = Unresolved '
+            f'AND assignee in ({self.env.jira_user_id}) '
+            'ORDER BY priority DESC, updated DESC'
+          )
+          res = self.jira.get(
+            f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint/{sprint_id}/issue?jql={jql}"
+          )
+          issues = res['issues']
+        tickets = [f"{issue['key']} -- {issue['fields']['summary']}" for issue in issues]
+        questions = [inquirer.List("ticket", message="What ticket?", choices=tickets)]
+        answers = inquirer.prompt(questions)
+        ticket = answers.get('ticket')
+        ticket_key = ticket.split(' -- ')[0]
+        ticket_us = "_".join(ticket.split(' -- ')[1].lower().split(' '))
+        branch_name = f"s{sprint_number}/{ticket_key}-{ticket_us}"
+        output = shell("git status --porcelain --untracked-files=no", err_exit=True)
+        if output == "":
+            shell(f"git checkout {self.env.github_main_branch}", err_exit=True)
+            shell(f"git checkout {branch_name}", err_exit=True)
+        else:
+            print(
+                colored(
+                    "Expected clean directory, please commit or stash your pending changes",
+                    "yellow",
+                )
+            )
+            print(output)
 
     def pr(self):
         branch = get_branch(self.args)
