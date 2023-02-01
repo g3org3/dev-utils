@@ -484,7 +484,7 @@ class Cli:
         ticket = answers.get('ticket')
         ticket_key = ticket.split(' -- ')[0]
         ticket_us = "_".join(ticket.split(' -- ')[1].lower().split(' '))
-        branch_name = f"s{sprint_number}/{ticket_key}-{ticket_us}"
+        branch_name = f"s{sprint_number}/{ticket_key}"
         output = shell("git status --porcelain --untracked-files=no", err_exit=True)
         if output == "":
             shell(f"git checkout {self.env.github_main_branch}", err_exit=True)
