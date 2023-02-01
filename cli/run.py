@@ -489,6 +489,7 @@ class Cli:
         if output == "":
             shell(f"git checkout {self.env.github_main_branch}", err_exit=True)
             shell(f"git checkout -b {branch_name}", err_exit=True)
+            shell(f"git checkout {branch_name}", err_exit=True)
         else:
             print(
                 colored(
