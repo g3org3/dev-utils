@@ -483,8 +483,16 @@ class Cli:
         answers = inquirer.prompt(questions)
         ticket = answers.get('ticket')
         ticket_key = ticket.split(' -- ')[0]
-        ticket_us = "_".join(ticket.split(' -- ')[1].lower().split(' '))
-        desc = "_".join(input("Enter description: ").split(' ')).lower()
+        ticket_us = "".join(
+            "".join(
+                "_".join(ticket.split(' -- ')[1].lower().split(' ')).split('[')
+            ).split(']')
+        )
+        branch_name = f"s{sprint_number}/{ticket_key}-{ticket_us}"
+        lets_continue = input(f"Is this branch name ok '{branch_name}' ? [Y/n]: ")
+        desc = ticket_us
+        if "n" in lets_continue.lower():
+            desc = "_".join(input("Enter description: ").split(' ')).lower()
         branch_name = f"s{sprint_number}/{ticket_key}-{desc}"
         output = shell("git status --porcelain --untracked-files=no", err_exit=True)
         if output == "":
