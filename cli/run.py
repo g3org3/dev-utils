@@ -15,8 +15,29 @@ import subprocess
 import sys
 import urllib3
 import yaml
+import json
 
 urllib3.disable_warnings()
+
+
+@dataclass
+class TStatus:
+    id: str
+    name: str
+    next: Optional[str] = None
+
+
+@dataclass
+class TStatuses():
+    backlog = TStatus(id="11", name="To Do", next="61")
+    daily = TStatus(id="61", name="To Develop", next="21")
+    doing = TStatus(id="21", name="In Progress", next="31")
+    code_review = TStatus(id="31", name="In Review", next="51")
+    to_validate = TStatus(id="51", name="In Test", next="41")
+    done = TStatus(id="41", name="Done")
+
+
+T = TStatuses()
 
 
 @dataclass
@@ -237,6 +258,28 @@ class JiraApi:
             self.cookies["seraph.rememberme.cookie"] = env.jira_remember_me
         self.host = env.jira_host
         self.args = args
+
+    def post(self, endpoint, payload):
+        url = f"https://{self.host}{endpoint}"
+        res = r.post(
+            url,
+            proxies=self.proxies,
+            cookies=self.cookies,
+            headers=self.headers,
+            verify=False,
+            json=payload,
+        )
+        if res.status_code != 200:
+            if self.args.verbose:
+                print(colored(res.text, "red"))
+            if res.status_code != 204:
+                print(
+                    colored(
+                        f"Tried to call jira but we received {res.status_code}", "yellow"
+                    )
+                )
+            return None
+        return res.json()
 
     def get(self, endpoint):
         url = f"https://{self.host}{endpoint}"
@@ -496,8 +539,20 @@ class Cli:
         branch_name = f"s{sprint_number}/{ticket_key}-{desc}"
         output = shell("git status --porcelain --untracked-files=no", err_exit=True)
         if output == "":
+            print("")
+            print(f"> creating branch: {branch_name}")
             shell(f"git checkout {self.env.github_main_branch}", err_exit=True)
             shell(f"git checkout -B {branch_name}", err_exit=True)
+            lets_continue = input(
+                f"> Lets move it to doing {T.doing.next}? [Y/n]: "
+            )
+            if "n" not in lets_continue.lower():
+                self.jira.post(
+                    f"/rest/api/2/issue/{ticket_key}/transitions",
+                    payload={"transition": {"id": T.doing.id}}
+                )
+
+
         else:
             print(
                 colored(
@@ -520,7 +575,8 @@ class Cli:
 
         (_, ticket) = get_ticket_from_branch(self.args, self.env)
         response = self.jira.get(
-            f"/rest/api/2/issue/{ticket}?fields=summary,customfield_10006"
+            f"/rest/api/2/issue/{ticket}"
+            "?fields=summary,customfield_10006,status"
         )
 
         if response:
@@ -535,6 +591,18 @@ class Cli:
             copy_to_clipboard(name)
             print(f"- name: {colored(name, 'yellow')}")
             print(colored("  # copied the name to your clipboard!", "green"))
+            status_name = response["fields"]["status"]["name"]
+            ticket_id = response["id"]
+            if status_name == T.doing.name or status_name == T.daily.name:
+                print("")
+                lets_continue = input(
+                    f"> Lets move it to code review {T.doing.next}? [Y/n]: "
+                )
+                if "n" not in lets_continue.lower():
+                    self.jira.post(
+                        f"/rest/api/2/issue/{ticket_id}/transitions",
+                        payload={"transition": {"id": T.code_review.id}}
+                    )
 
         open_link(link, press_enter_message=True)
 
