@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from emoji import emojize
 from termcolor import colored
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, List
 import argparse
 import inquirer
 import os
@@ -526,10 +526,9 @@ class Cli:
         answers = inquirer.prompt(questions)
         ticket = answers.get('ticket')
         ticket_key = ticket.split(' -- ')[0]
-        ticket_us = "".join(
-            "".join(
-                "_".join(ticket.split(' -- ')[1].lower().split(' ')).split('[')
-            ).split(']')
+        ticket_us = remove_characters(
+            ticket.split(' -- ')[1].lower(),
+            [' ', '[', ']', '(', ')', '-', ',', '.']
         )
         branch_name = f"s{sprint_number}/{ticket_key}-{ticket_us}"
         lets_continue = input(f"Is this branch name ok '{branch_name}' ? [Y/n]: ")
@@ -638,6 +637,13 @@ def copy_to_clipboard(text):
         os.system(f'echo "{text}" | pbcopy')
     else:
         print(f"could not detect your OS machine:[{machine}] error:[{error}]")
+
+
+def remove_characters(line: str, to_remove: List[str]):
+    clean_line = line
+    for char in to_remove:
+        clean_line = clean_line.replace(char, '')
+    return clean_line
 
 
 if __name__ == "__main__":
