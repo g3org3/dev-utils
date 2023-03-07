@@ -15,7 +15,6 @@ import subprocess
 import sys
 import urllib3
 import yaml
-import json
 
 urllib3.disable_warnings()
 
@@ -92,6 +91,9 @@ class Env:
 
     def set_user_id(self, value):
         self.environment["jira"]["user_id"] = value
+
+    def set_github_main_branch(self, value):
+        self.environment["github"]["main_branch"] = value
 
     def __str__(self):
         return yaml.dump(self.environment, Dumper=yaml.Dumper, sort_keys=False)
@@ -366,7 +368,9 @@ class Cli:
             os.system(f'xdg-open "{url}"')
 
     def save_session(self):
-        if "b:" == self.args.save_session[0:2]:
+        if "github.main_branch=" in self.args.save_session:
+            self.env.set_github_main_branch(self.args.save_session.split('=')[1])
+        elif "b:" == self.args.save_session[0:2]:
             self.env.set_board_id(self.args.save_session[2:])
         elif "u:" == self.args.save_session[0:2]:
             self.env.set_user_id(self.args.save_session[2:])
@@ -510,17 +514,17 @@ class Cli:
         )
         issues = res['issues']
         if not issues:
-          jql = (
-            'project = CFCCON '
-            'AND status = "To Do" '
-            'AND resolution = Unresolved '
-            f'AND assignee in ({self.env.jira_user_id}) '
-            'ORDER BY priority DESC, updated DESC'
-          )
-          res = self.jira.get(
-            f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint/{sprint_id}/issue?jql={jql}"
-          )
-          issues = res['issues']
+            jql = (
+                'project = CFCCON '
+                'AND status = "To Do" '
+                'AND resolution = Unresolved '
+                f'AND assignee in ({self.env.jira_user_id}) '
+                'ORDER BY priority DESC, updated DESC'
+            )
+            res = self.jira.get(
+                f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint/{sprint_id}/issue?jql={jql}"
+            )
+            issues = res['issues']
         tickets = [f"{issue['key']} -- {issue['fields']['summary']}" for issue in issues]
         questions = [inquirer.List("ticket", message="What ticket?", choices=tickets)]
         answers = inquirer.prompt(questions)
@@ -550,8 +554,6 @@ class Cli:
                     f"/rest/api/2/issue/{ticket_key}/transitions",
                     payload={"transition": {"id": T.doing.id}}
                 )
-
-
         else:
             print(
                 colored(
