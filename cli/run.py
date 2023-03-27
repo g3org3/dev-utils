@@ -532,8 +532,8 @@ class Cli:
         ticket_key = ticket.split(' -- ')[0]
         ticket_us = remove_characters(
             ticket.split(' -- ')[1].lower(),
-            [' ', '[', ']', '(', ')', '-', ',', '.']
-        )
+            [', ']', '(', ')', '-', ',', '.']
+        ).replace(' ', '_')
         branch_name = f"s{sprint_number}/{ticket_key}-{ticket_us}"
         lets_continue = input(f"Is this branch name ok '{branch_name}' ? [Y/n]: ")
         desc = ticket_us
@@ -543,11 +543,12 @@ class Cli:
         output = shell("git status --porcelain --untracked-files=no", err_exit=True)
         if output == "":
             print("")
-            print(f"> creating branch: {branch_name}")
+            print(f"> git checkout {self.env.github_main_branch}")
+            print(f"> git checkout -B {branch_name}")
             shell(f"git checkout {self.env.github_main_branch}", err_exit=True)
             shell(f"git checkout -B {branch_name}", err_exit=True)
             lets_continue = input(
-                f"> Lets move it to doing {T.doing.next}? [Y/n]: "
+                f"> Lets move it to doing? [Y/n]: "
             )
             if "n" not in lets_continue.lower():
                 self.jira.post(
@@ -597,7 +598,7 @@ class Cli:
             if status_name == T.doing.name or status_name == T.daily.name:
                 print("")
                 lets_continue = input(
-                    f"> Lets move it to code review {T.doing.next}? [Y/n]: "
+                    f"> Lets move it to code review? [Y/n]: "
                 )
                 if "n" not in lets_continue.lower():
                     self.jira.post(
