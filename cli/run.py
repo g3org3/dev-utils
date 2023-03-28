@@ -532,8 +532,8 @@ class Cli:
         ticket_key = ticket.split(' -- ')[0]
         ticket_us = remove_characters(
             ticket.split(' -- ')[1].lower(),
-            [', ']', '(', ')', '-', ',', '.']
-        ).replace(' ', '_')
+            ['[', ']', '(', ')', ',', '.']
+        ).replace(' ', '_').replace('-', '_')
         branch_name = f"s{sprint_number}/{ticket_key}-{ticket_us}"
         lets_continue = input(f"Is this branch name ok '{branch_name}' ? [Y/n]: ")
         desc = ticket_us
