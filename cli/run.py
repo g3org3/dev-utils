@@ -74,7 +74,16 @@ class Env:
 
     @property
     def github_main_branch(self):
-        return self.environment.get("github").get("main_branch")
+        branches = self.environment.get("github").get("main_branch")
+        if "," not in branches:
+            return branches
+        branches = branches.split(",")
+        questions = [inquirer.List("branch", message="Which is the base branch?", choices=branches)]
+        answers = inquirer.prompt(questions)
+        if not answers:
+            exit()
+        branch = answers.get("branch")
+        return branch
 
     @property
     def github_repo(self):
@@ -141,6 +150,11 @@ def main():
     parser.add_argument(
         "--push",
         help="will push your branch with set upstream ",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--rebase",
+        help="rebase current branch with the base branch",
         action="store_true",
     )
     parser.add_argument(
@@ -322,6 +336,8 @@ class Cli:
             self.open()
         elif self.args.branch:
             self.branch()
+        elif self.args.rebase:
+            self.rebase()
         elif self.args.save_session:
             self.save_session()
         elif self.args.update:
@@ -488,6 +504,12 @@ class Cli:
         print(push_branch_cmd + "\n")
         output = shell(push_branch_cmd, err_exit=True)
         print(output)
+
+    def rebase(self):
+        cmd = f"git pull --rebase origin {self.env.github_main_branch}"
+        print(f" > {cmd}")
+        shell(cmd, err_exit=True)
+
 
     def create(self):
         if not self.env.jira_user_id or not self.env.jira_board_id:
