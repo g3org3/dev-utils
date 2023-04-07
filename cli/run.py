@@ -314,6 +314,7 @@ class JiraApi:
                     f"Tried to call jira but we received {res.status_code}", "yellow"
                 )
             )
+            print()
             return None
         return res.json()
 
@@ -520,6 +521,8 @@ class Cli:
         res = self.jira.get(
             f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint?state=active"
         )
+        if res is None:
+            exit(1)
         sprint = res['values'][0]
         sprint_id = sprint.get('id')
         sprint_name = sprint.get('name')
@@ -534,6 +537,8 @@ class Cli:
         res = self.jira.get(
             f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint/{sprint_id}/issue?jql={jql}"
         )
+        if res is None:
+            exit(1)
         issues = res['issues']
         if not issues:
             jql = (
@@ -546,6 +551,8 @@ class Cli:
             res = self.jira.get(
                 f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint/{sprint_id}/issue?jql={jql}"
             )
+            if res is None:
+                exit(1)
             issues = res['issues']
         tickets = [f"{issue['key']} -- {issue['fields']['summary']}" for issue in issues]
         questions = [inquirer.List("ticket", message="What ticket?", choices=tickets)]
