@@ -317,7 +317,7 @@ class JiraApi:
             )
             print(
                 colored(
-                    "Please open jira in your browser and update ja with the value of the cookie"
+                    "Please open jira in your browser and update ja with the cookie `seraph.rememberme.cookie`"
                 )
             )
             print(
