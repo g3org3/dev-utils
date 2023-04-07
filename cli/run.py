@@ -291,7 +291,8 @@ class JiraApi:
             if res.status_code != 204:
                 print(
                     colored(
-                        f"Tried to call jira but we received {res.status_code}", "yellow"
+                        f"\n# Tried to call jira but we received {res.status_code}",
+                        "yellow"
                     )
                 )
             return None
@@ -311,7 +312,18 @@ class JiraApi:
                 print(colored(res.text, "red"))
             print(
                 colored(
-                    f"Tried to call jira but we received {res.status_code}", "yellow"
+                    f"\n# Tried to call jira but we received {res.status_code}", "yellow"
+                )
+            )
+            print(
+                colored(
+                    "Please open jira in your browser and update ja with the value of the cookie"
+                )
+            )
+            print(
+                colored(
+                    "ja -s <cookie-value>",
+                    "blue"
                 )
             )
             print()
