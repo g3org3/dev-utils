@@ -184,6 +184,9 @@ def main():
     parser.add_argument(
         "--update", "-u", help="Update dev-utils repo", action="store_true"
     )
+    parser.add_argument(
+        "--create", help="Create a new jira ticket", action="store_true"
+    )
     parser.add_argument("--version", action="version", version="%(prog)s 0.4.1")
     args = parser.parse_args()
     env = get_env(args)
@@ -285,7 +288,7 @@ class JiraApi:
             verify=False,
             json=payload,
         )
-        if res.status_code != 200:
+        if res.status_code != 200 and res.status_code != 201:
             if self.args.verbose:
                 print(colored(res.text, "red"))
             if res.status_code != 204:
@@ -297,6 +300,33 @@ class JiraApi:
                 )
             return None
         return res.json()
+
+    def get_all_epics(self):
+        pass
+
+    def create_ticket(self, summary, sprint_id):
+        payload = {
+            "summary": summary,
+            "contexts": ["project = CFCCON ORDER BY Rank ASC"],
+            "issueTypeId": "10001",
+            "overrides": {"Sprint": sprint_id},
+        }
+
+        return self.post("/rest/inline-create/1.0/issue", payload)
+        
+    def get_all_sprints(self):
+        sprints = []
+        res = self.get(f"/rest/agile/1.0/board/2704/sprint")
+        if res is None:
+            exit(1)
+        sprints = res.get('values')
+        res = self.get(f"/rest/agile/1.0/board/2704/sprint?startAt=50")
+        if res is None:
+            exit(1)
+        sprints = sprints + res.get('values')
+        
+        return sprints
+
 
     def get(self, endpoint):
         url = f"https://{self.host}{endpoint}"
@@ -357,6 +387,8 @@ class Cli:
             self.update()
         elif self.args.push:
             self.push()
+        elif self.args.create:
+            self.create_jira_ticket()
         elif self.args.new:
             self.create()
         elif not self.args.verbose:
@@ -522,6 +554,37 @@ class Cli:
         cmd = f"git pull --rebase origin {self.env.github_main_branch}"
         print(f" > {cmd}")
         shell(cmd, err_exit=True)
+
+    
+    def create_jira_ticket(self):
+        # Todo: Add epics
+        # Todo: Add acceptance criteria
+        # Todo: Add how
+        sprints = self.jira.get_all_sprints()
+        active_sprint = [s["name"] for s in sprints if s["state"] == "active"]
+        choices = ([sprint["name"] for sprint in sprints if sprint["state"] != "closed" and sprint["state"] != "active"])
+        choices.sort(key=lambda x: x)
+        choices = active_sprint + choices
+        answers = inquirer.prompt([
+            inquirer.Text("userstory", message="What is the user story"),
+            inquirer.List("sprint", message="which sprint?", choices=choices),
+            # inquirer.Text("ac", message="Acceptance Criteria (can be empty)"),
+            # inquirer.Text("how", message="How (can be empty)"),
+        ])
+
+        if not answers:
+            exit(1)
+       
+        # print(answers)
+        userstory = answers.get('userstory')
+        selected_sprint = [s for s in sprints if s["name"] == answers.get('sprint')][0]
+        res = self.jira.create_ticket(userstory, selected_sprint["id"])
+        if res is None:
+            exit(1)
+        key = res.get("issue").get("issueKey")
+        print("Created ticket!")
+        print(f"https://jiradbg.deutsche-boerse.de/browse/{key}")
+
 
 
     def create(self):
