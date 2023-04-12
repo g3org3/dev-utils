@@ -515,11 +515,12 @@ class Cli:
 
     def branch(self):
         shell("git fetch -a")
-        output = shell("git branch -a", err_exit=True)
-        branches = ["".join(branch.split("*")).strip() for branch in output.split("\n")]
-        branches = ["".join(b.split("remotes/origin/")).strip() for b in branches]
-        branches = list(set(branches))
-        branches.sort(key=lambda x: x, reverse=True)
+        output = shell("git for-each-ref --sort=-committerdate refs/heads/ --format='%(refname:short)'", err_exit=True)
+        branches = output.replace("'", '').split('\n')
+        # branches = ["".join(branch.split("*")).strip() for branch in output.split("\n")]
+        # branches = ["".join(b.split("remotes/origin/")).strip() for b in branches]
+        # branches = list(set(branches))
+        # branches.sort(key=lambda x: x, reverse=True)
 
         if self.args.branch != "*":
             branches = [branch for branch in branches if self.args.branch in branch]
