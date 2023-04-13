@@ -631,19 +631,24 @@ class Cli:
                 exit(1)
             issues = res['issues']
         tickets = [f"{issue['key']} -- {issue['fields']['summary']}" for issue in issues]
-        questions = [inquirer.List("ticket", message="What ticket?", choices=tickets)]
+        questions = [
+            inquirer.List("ticket", message="What ticket?", choices=tickets),
+            inquirer.Text("branchdesc", message="Enter branch description")
+        ]
         answers = inquirer.prompt(questions)
-        ticket = answers.get('ticket')
+        if not answers:
+            exit(1)
+        ticket = str(answers.get('ticket'))
         ticket_key = ticket.split(' -- ')[0]
-        ticket_us = remove_characters(
-            ticket.split(' -- ')[1].lower(),
-            ['[', ']', '(', ')', ',', '.']
-        ).replace(' ', '_').replace('-', '_')
-        branch_name = f"s{sprint_number}/{ticket_key}-{ticket_us}"
-        lets_continue = input(f"Is this branch name ok '{branch_name}' ? [Y/n]: ")
-        desc = ticket_us
-        if "n" in lets_continue.lower():
-            desc = "_".join(input("Enter description: ").split(' ')).lower()
+        desc = str(answers.get('branchdesc')).replace(' ', '_')
+        # ticket_us = remove_characters(
+        #     ticket.split(' -- ')[1].lower(),
+        #     ['[', ']', '(', ')', ',', '.']
+        # ).replace(' ', '_').replace('-', '_')
+        # branch_name = f"s{sprint_number}/{ticket_key}-{ticket_us}"
+        # lets_continue = input(f"Is this branch name ok '{branch_name}' ? [Y/n]: ")
+        # desc = ticket_us
+        # if "n" in lets_continue.lower():
         branch_name = f"s{sprint_number}/{ticket_key}-{desc}"
         output = shell("git status --porcelain --untracked-files=no", err_exit=True)
         if output == "":
