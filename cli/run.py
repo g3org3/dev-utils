@@ -501,13 +501,13 @@ class Cli:
         # branches = list(set(branches))
         # branches.sort(key=lambda x: x, reverse=True)
 
-        if self.args.branch != "*":
+        if self.args.branch != "*" and self.args.branch != "f":
             branches = [branch for branch in branches if self.args.branch in branch]
         if not branches:
             print("no branches found")
             exit()
 
-        branch = gum("What branch?", branches, "choose")
+        branch = gum("What branch?", branches, "choose" if self.args.branch != "f" else "filter")
         output = shell("git status --porcelain --untracked-files=no", err_exit=True)
         if output == "":
             shell(f"git checkout {branch}", err_exit=True)
@@ -729,8 +729,13 @@ def remove_characters(line: str, to_remove: List[str]):
 
 def gum(message: str, items: List[str], action = "choose") -> str:
     if g_has_gum:
-        result = subprocess.run(["gum", action] + items + ["--header", message], stdout=subprocess.PIPE, text=True)
-        return result.stdout.strip()
+        if action == "filter":
+            options = "\n".join(items)
+            result = subprocess.check_output(["bash", '-c', f'echo "{options}" | gum filter'])
+            return result.decode().strip()
+        else:
+            result = subprocess.run(["gum", action] + items + ["--header", message], stdout=subprocess.PIPE, text=True)
+            return result.stdout.strip()
     else:
         questions = [inquirer.List("items", message=message, choices=items)]
         answers = inquirer.prompt(questions)
@@ -767,7 +772,7 @@ def jira_to_md(text: str):
 def pretty_print_ticket(description: str, pr_status: str, points: str, owner: str, summary: str, key: str, epic: str):
     if g_has_glow:
         desc_md = jira_to_md(description)
-        subprocess.check_call(["bash", '-c', f"echo '> {key} {pr_status} {points} *{owner}*\n> {summary}' | glow"])
+        subprocess.check_call(["bash", '-c', f"echo '> {key} {pr_status} {points} {owner} {epic}\n> {summary}' | glow"])
         subprocess.check_call(["bash", "-c", f"echo '{desc_md}' | glow"])
         subprocess.check_call(["bash", '-c', f"echo '---' | glow"])
     else:
