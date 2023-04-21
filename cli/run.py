@@ -38,6 +38,8 @@ class TStatuses():
 
 T = TStatuses()
 
+g_has_gum = subprocess.run(["which", "gum"], stdout=subprocess.PIPE, text=True).stdout.strip() != ""
+g_has_glow = subprocess.run(["which", "glow"], stdout=subprocess.PIPE, text=True).stdout.strip() != ""
 
 @dataclass
 class Env:
@@ -450,10 +452,10 @@ class Cli:
         )  # fields=summary,description,customfield_10006,customfield_11100
         if r is None:
             exit(1)
-        summary = r["fields"]["summary"]
+        summary = r["fields"]["summary"].replace('"', '').replace("'", '')
         description = (
             r["fields"]["description"] if r["fields"].get("description") else ""
-        )
+        ).replace('"', '').replace("'", '')
         points = (
             r["fields"]["customfield_10006"]
             if r["fields"].get("customfield_10006")
@@ -477,41 +479,18 @@ class Cli:
             else ""
         )
 
-        # for k in r['fields'].keys():
-        #   print(f"{k}|| {r['fields'][k]}")
-        print(
-            f"\n{emojize(':memo:')} "
-            f"{colored(r['key'], 'red')} "
-            f"{colored(pr_status, 'yellow')}"
-            f"{colored(points, 'green')}"
-            f"{colored(epic, 'blue')}"
-            f"{colored(owner, 'blue')}"
-        )
-        print("   " + summary)
-        print("")
-        description = f'{colored("How", "red")}'.join(description.split("How"))
-        description = f'{colored("How", "red")}'.join(description.split("how"))
-        description = f'{colored("Screen", "red")}'.join(description.split("Screen"))
-        description = f'{colored("Acceptance Criteria", "red")}'.join(
-            description.split("Acceptance Criteria")
-        )
-        description = f'{colored("Acceptance Criteria", "red")}'.join(
-            description.split("Acceptance criteria")
-        )
-        description = f'{colored("Acceptance Criteria", "red")}'.join(
-            description.split("acceptance criteria")
-        )
-        description = f'{colored("References", "red")}'.join(
-            description.split("References")
-        )
-        print(emojize(description))
+        pretty_print_ticket(description, pr_status, points, owner, summary, r['key'], epic)
+        
         for c in comments["comments"]:
             display_name = c["author"]["displayName"]
-            body = c["body"]
+            body = c["body"].replace('"', '').replace("'", "").strip()
             updated = datetime.strptime(
                 c["updated"], "%Y-%m-%dT%H:%M:%S.%f%z"
             ).strftime("%Y-%m-%d %H:%M %z")
-            print(f'\n{colored(updated, "blue")} {display_name}: {body}')
+            print(f'{colored(updated, "blue")} {colored(display_name, "yellow")}')
+            llines = [line for line in body.split('\n') if line and line.strip() != ""]
+            print('> ' + '> '.join(llines))
+            print("")
 
     def branch(self):
         shell("git fetch -a")
@@ -527,11 +506,8 @@ class Cli:
         if not branches:
             print("no branches found")
             exit()
-        questions = [inquirer.List("branch", message="What branch?", choices=branches)]
-        answers = inquirer.prompt(questions)
-        if not answers:
-            exit()
-        branch = answers.get("branch")
+
+        branch = gum("What branch?", branches, "choose")
         output = shell("git status --porcelain --untracked-files=no", err_exit=True)
         if output == "":
             shell(f"git checkout {branch}", err_exit=True)
@@ -641,14 +617,6 @@ class Cli:
         ticket = str(answers.get('ticket'))
         ticket_key = ticket.split(' -- ')[0]
         desc = str(answers.get('branchdesc')).replace(' ', '_')
-        # ticket_us = remove_characters(
-        #     ticket.split(' -- ')[1].lower(),
-        #     ['[', ']', '(', ')', ',', '.']
-        # ).replace(' ', '_').replace('-', '_')
-        # branch_name = f"s{sprint_number}/{ticket_key}-{ticket_us}"
-        # lets_continue = input(f"Is this branch name ok '{branch_name}' ? [Y/n]: ")
-        # desc = ticket_us
-        # if "n" in lets_continue.lower():
         branch_name = f"s{sprint_number}/{ticket_key}-{desc}"
         output = shell("git status --porcelain --untracked-files=no", err_exit=True)
         if output == "":
@@ -757,6 +725,81 @@ def remove_characters(line: str, to_remove: List[str]):
     for char in to_remove:
         clean_line = clean_line.replace(char, '')
     return clean_line
+
+
+def gum(message: str, items: List[str], action = "choose") -> str:
+    if g_has_gum:
+        result = subprocess.run(["gum", action] + items + ["--header", message], stdout=subprocess.PIPE, text=True)
+        return result.stdout.strip()
+    else:
+        questions = [inquirer.List("items", message=message, choices=items)]
+        answers = inquirer.prompt(questions)
+        result = answers.get('items') if answers else None
+        if not answers or not result:
+            exit()
+        return result
+
+
+
+def jira_to_md(text: str):
+    replaceitems = [
+        ('h1.', '#'),
+        ('h2.', '##'),
+        ('h3.', '###'),
+        ('h4.', '####'),
+        ('h5.', '####'),
+        ('----', '      -'),
+        ('---', '    -'),
+        ('--', '  -'),
+        ('****', '      *'),
+        ('***', '    *'),
+        ('**', '  *'),
+        ('{code}', '```'),
+        ('{color:red}', '*'),
+        ('{color}', '*')
+    ]
+    output = text
+    for (jira, md) in replaceitems:
+        output = output.replace(jira, md)
+    return output
+
+
+def pretty_print_ticket(description: str, pr_status: str, points: str, owner: str, summary: str, key: str, epic: str):
+    if g_has_glow:
+        desc_md = jira_to_md(description)
+        subprocess.check_call(["bash", '-c', f"echo '> {key} {pr_status} {points} *{owner}*\n> {summary}' | glow"])
+        subprocess.check_call(["bash", "-c", f"echo '{desc_md}' | glow"])
+        subprocess.check_call(["bash", '-c', f"echo '---' | glow"])
+    else:
+        # for k in r['fields'].keys():
+        #   print(f"{k}|| {r['fields'][k]}")
+        print(
+            f"\n{emojize(':memo:')} "
+            f"{colored(key, 'red')} "
+            f"{colored(pr_status, 'yellow')}"
+            f"{colored(points, 'green')}"
+            f"{colored(epic, 'blue')}"
+            f"{colored(owner, 'blue')}"
+        )
+        print("   " + summary)
+        print("")
+        description = f'{colored("How", "red")}'.join(description.split("How"))
+        description = f'{colored("How", "red")}'.join(description.split("how"))
+        description = f'{colored("Screen", "red")}'.join(description.split("Screen"))
+        description = f'{colored("Acceptance Criteria", "red")}'.join(
+            description.split("Acceptance Criteria")
+        )
+        description = f'{colored("Acceptance Criteria", "red")}'.join(
+            description.split("Acceptance criteria")
+        )
+        description = f'{colored("Acceptance Criteria", "red")}'.join(
+            description.split("acceptance criteria")
+        )
+        description = f'{colored("References", "red")}'.join(
+            description.split("References")
+        )
+        print(emojize(description))
+        print("\n---\n")
 
 
 if __name__ == "__main__":
