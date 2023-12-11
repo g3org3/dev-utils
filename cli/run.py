@@ -27,7 +27,7 @@ class TStatus:
 
 
 @dataclass
-class TStatuses():
+class TStatuses:
     backlog = TStatus(id="11", name="To Do", next="61")
     daily = TStatus(id="61", name="To Develop", next="21")
     doing = TStatus(id="21", name="In Progress", next="31")
@@ -38,8 +38,15 @@ class TStatuses():
 
 T = TStatuses()
 
-g_has_gum = subprocess.run(["which", "gum"], stdout=subprocess.PIPE, text=True).stdout.strip() != ""
-g_has_glow = subprocess.run(["which", "glow"], stdout=subprocess.PIPE, text=True).stdout.strip() != ""
+g_has_gum = (
+    subprocess.run(["which", "gum"], stdout=subprocess.PIPE, text=True).stdout.strip()
+    != ""
+)
+g_has_glow = (
+    subprocess.run(["which", "glow"], stdout=subprocess.PIPE, text=True).stdout.strip()
+    != ""
+)
+
 
 @dataclass
 class Env:
@@ -68,7 +75,7 @@ class Env:
 
     @property
     def jira_board_id(self):
-        return self.environment.get('jira').get('board_id')
+        return self.environment.get("jira").get("board_id")
 
     @property
     def github_host(self):
@@ -80,7 +87,11 @@ class Env:
         if "," not in branches:
             return branches
         branches = branches.split(",")
-        questions = [inquirer.List("branch", message="Which is the base branch?", choices=branches)]
+        questions = [
+            inquirer.List(
+                "branch", message="Which is the base branch?", choices=branches
+            )
+        ]
         answers = inquirer.prompt(questions)
         if not answers:
             exit()
@@ -297,7 +308,7 @@ class JiraApi:
                 print(
                     colored(
                         f"\n# Tried to call jira but we received {res.status_code}",
-                        "yellow"
+                        "yellow",
                     )
                 )
             return None
@@ -315,20 +326,19 @@ class JiraApi:
         }
 
         return self.post("/rest/inline-create/1.0/issue", payload)
-        
+
     def get_all_sprints(self):
         sprints = []
         res = self.get(f"/rest/agile/1.0/board/2704/sprint")
         if res is None:
             exit(1)
-        sprints = res.get('values')
+        sprints = res.get("values")
         res = self.get(f"/rest/agile/1.0/board/2704/sprint?startAt=50")
         if res is None:
             exit(1)
-        sprints = sprints + res.get('values')
-        
-        return sprints
+        sprints = sprints + res.get("values")
 
+        return sprints
 
     def get(self, endpoint):
         url = f"https://{self.host}{endpoint}"
@@ -344,7 +354,8 @@ class JiraApi:
                 print(colored(res.text, "red"))
             print(
                 colored(
-                    f"\n# Tried to call jira but we received {res.status_code}", "yellow"
+                    f"\n# Tried to call jira but we received {res.status_code}",
+                    "yellow",
                 )
             )
             print(
@@ -352,12 +363,7 @@ class JiraApi:
                     "Please open jira in your browser and update ja with the cookie `seraph.rememberme.cookie`"
                 )
             )
-            print(
-                colored(
-                    "ja -s <cookie-value>",
-                    "blue"
-                )
-            )
+            print(colored("ja -s <cookie-value>", "blue"))
             print()
             return None
         return res.json()
@@ -432,7 +438,7 @@ class Cli:
 
     def save_session(self):
         if "github.main_branch=" in self.args.save_session:
-            self.env.set_github_main_branch(self.args.save_session.split('=')[1])
+            self.env.set_github_main_branch(self.args.save_session.split("=")[1])
         elif "b:" == self.args.save_session[0:2]:
             self.env.set_board_id(self.args.save_session[2:])
         elif "u:" == self.args.save_session[0:2]:
@@ -452,10 +458,12 @@ class Cli:
         )  # fields=summary,description,customfield_10006,customfield_11100
         if r is None:
             exit(1)
-        summary = r["fields"]["summary"].replace('"', '').replace("'", '')
+        summary = r["fields"]["summary"].replace('"', "").replace("'", "")
         description = (
-            r["fields"]["description"] if r["fields"].get("description") else ""
-        ).replace('"', '').replace("'", '')
+            (r["fields"]["description"] if r["fields"].get("description") else "")
+            .replace('"', "")
+            .replace("'", "")
+        )
         points = (
             r["fields"]["customfield_10006"]
             if r["fields"].get("customfield_10006")
@@ -479,23 +487,28 @@ class Cli:
             else ""
         )
 
-        pretty_print_ticket(description, pr_status, points, owner, summary, r['key'], epic)
-        
+        pretty_print_ticket(
+            description, pr_status, points, owner, summary, r["key"], epic
+        )
+
         for c in comments["comments"]:
             display_name = c["author"]["displayName"]
-            body = c["body"].replace('"', '').replace("'", "").strip()
+            body = c["body"].replace('"', "").replace("'", "").strip()
             updated = datetime.strptime(
                 c["updated"], "%Y-%m-%dT%H:%M:%S.%f%z"
             ).strftime("%Y-%m-%d %H:%M %z")
             print(f'{colored(updated, "blue")} {colored(display_name, "yellow")}')
-            llines = [line for line in body.split('\n') if line and line.strip() != ""]
-            print('> ' + '> '.join(llines))
+            llines = [line for line in body.split("\n") if line and line.strip() != ""]
+            print("> " + "> ".join(llines))
             print("")
 
     def branch(self):
         shell("git fetch -a")
-        output = shell("git for-each-ref --sort=-committerdate refs/heads/ --format='%(refname:short)'", err_exit=True)
-        branches = output.replace("'", '').split('\n')
+        output = shell(
+            "git for-each-ref --sort=-committerdate refs/heads/ --format='%(refname:short)'",
+            err_exit=True,
+        )
+        branches = output.replace("'", "").split("\n")
         # branches = ["".join(branch.split("*")).strip() for branch in output.split("\n")]
         # branches = ["".join(b.split("remotes/origin/")).strip() for b in branches]
         # branches = list(set(branches))
@@ -507,7 +520,9 @@ class Cli:
             print("no branches found")
             exit()
 
-        branch = gum("What branch?", branches, "choose" if self.args.branch != "f" else "filter")
+        branch = gum(
+            "What branch?", branches, "choose" if self.args.branch != "f" else "filter"
+        )
         output = shell("git status --porcelain --untracked-files=no", err_exit=True)
         if output == "":
             shell(f"git checkout {branch}", err_exit=True)
@@ -532,29 +547,34 @@ class Cli:
         print(f" > {cmd}")
         shell(cmd, err_exit=True)
 
-    
     def create_jira_ticket(self):
         # Todo: Add epics
         # Todo: Add acceptance criteria
         # Todo: Add how
         sprints = self.jira.get_all_sprints()
         active_sprint = [s["name"] for s in sprints if s["state"] == "active"]
-        choices = ([sprint["name"] for sprint in sprints if sprint["state"] != "closed" and sprint["state"] != "active"])
+        choices = [
+            sprint["name"]
+            for sprint in sprints
+            if sprint["state"] != "closed" and sprint["state"] != "active"
+        ]
         choices.sort(key=lambda x: x)
         choices = active_sprint + choices
-        answers = inquirer.prompt([
-            inquirer.Text("userstory", message="What is the user story"),
-            inquirer.List("sprint", message="which sprint?", choices=choices),
-            # inquirer.Text("ac", message="Acceptance Criteria (can be empty)"),
-            # inquirer.Text("how", message="How (can be empty)"),
-        ])
+        answers = inquirer.prompt(
+            [
+                inquirer.Text("userstory", message="What is the user story"),
+                inquirer.List("sprint", message="which sprint?", choices=choices),
+                # inquirer.Text("ac", message="Acceptance Criteria (can be empty)"),
+                # inquirer.Text("how", message="How (can be empty)"),
+            ]
+        )
 
         if not answers:
             exit(1)
-       
+
         # print(answers)
-        userstory = answers.get('userstory')
-        selected_sprint = [s for s in sprints if s["name"] == answers.get('sprint')][0]
+        userstory = answers.get("userstory")
+        selected_sprint = [s for s in sprints if s["name"] == answers.get("sprint")][0]
         res = self.jira.create_ticket(userstory, selected_sprint["id"])
         if res is None:
             exit(1)
@@ -562,61 +582,61 @@ class Cli:
         print("Created ticket!")
         print(f"https://jiradbg.deutsche-boerse.de/browse/{key}")
 
-
-
     def create(self):
         if not self.env.jira_user_id or not self.env.jira_board_id:
-          print("you are missing either the user_id and/or the jira_board_id")
-          print("to save the user id: `ja -s u:ab123`")
-          print("to save the board id: `ja -s b:7192`")
-          exit()
+            print("you are missing either the user_id and/or the jira_board_id")
+            print("to save the user id: `ja -s u:ab123`")
+            print("to save the board id: `ja -s b:7192`")
+            exit()
         res = self.jira.get(
             f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint?state=active"
         )
         if res is None:
             exit(1)
-        sprint = res['values'][0]
-        sprint_id = sprint.get('id')
-        sprint_name = sprint.get('name')
-        sprint_number = sprint_name.split(' ')[1]
+        sprint = res["values"][0]
+        sprint_id = sprint.get("id")
+        sprint_name = sprint.get("name")
+        sprint_number = sprint_name.split(" ")[1]
         jql = (
-          'project = CFCCON '
-          'AND status = "To Develop" '
-          'AND resolution = Unresolved '
-          f'AND assignee in ({self.env.jira_user_id}) '
-          'ORDER BY priority DESC, updated DESC'
+            "project = CFCCON "
+            'AND status = "To Develop" '
+            "AND resolution = Unresolved "
+            f"AND assignee in ({self.env.jira_user_id}) "
+            "ORDER BY priority DESC, updated DESC"
         )
         res = self.jira.get(
             f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint/{sprint_id}/issue?jql={jql}"
         )
         if res is None:
             exit(1)
-        issues = res['issues']
+        issues = res["issues"]
         if not issues:
             jql = (
-                'project = CFCCON '
+                "project = CFCCON "
                 'AND status = "To Do" '
-                'AND resolution = Unresolved '
-                f'AND assignee in ({self.env.jira_user_id}) '
-                'ORDER BY priority DESC, updated DESC'
+                "AND resolution = Unresolved "
+                f"AND assignee in ({self.env.jira_user_id}) "
+                "ORDER BY priority DESC, updated DESC"
             )
             res = self.jira.get(
                 f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint/{sprint_id}/issue?jql={jql}"
             )
             if res is None:
                 exit(1)
-            issues = res['issues']
-        tickets = [f"{issue['key']} -- {issue['fields']['summary']}" for issue in issues]
+            issues = res["issues"]
+        tickets = [
+            f"{issue['key']} -- {issue['fields']['summary']}" for issue in issues
+        ]
         questions = [
             inquirer.List("ticket", message="What ticket?", choices=tickets),
-            inquirer.Text("branchdesc", message="Enter branch description")
+            inquirer.Text("branchdesc", message="Enter branch description"),
         ]
         answers = inquirer.prompt(questions)
         if not answers:
             exit(1)
-        ticket = str(answers.get('ticket'))
-        ticket_key = ticket.split(' -- ')[0]
-        desc = str(answers.get('branchdesc')).replace(' ', '_')
+        ticket = str(answers.get("ticket"))
+        ticket_key = ticket.split(" -- ")[0]
+        desc = str(answers.get("branchdesc")).replace(" ", "_")
         branch_name = f"s{sprint_number}/{ticket_key}-{desc}"
         output = shell("git status --porcelain --untracked-files=no", err_exit=True)
         if output == "":
@@ -625,13 +645,11 @@ class Cli:
             print(f"> git checkout -B {branch_name}")
             shell(f"git checkout {self.env.github_main_branch}", err_exit=True)
             shell(f"git checkout -B {branch_name}", err_exit=True)
-            lets_continue = input(
-                f"> Lets move it to doing? [Y/n]: "
-            )
+            lets_continue = input(f"> Lets move it to doing? [Y/n]: ")
             if "n" not in lets_continue.lower():
                 self.jira.post(
                     f"/rest/api/2/issue/{ticket_key}/transitions",
-                    payload={"transition": {"id": T.doing.id}}
+                    payload={"transition": {"id": T.doing.id}},
                 )
         else:
             print(
@@ -655,8 +673,7 @@ class Cli:
 
         (_, ticket) = get_ticket_from_branch(self.args, self.env)
         response = self.jira.get(
-            f"/rest/api/2/issue/{ticket}"
-            "?fields=summary,customfield_10006,status"
+            f"/rest/api/2/issue/{ticket}" "?fields=summary,customfield_10006,status"
         )
 
         if response:
@@ -675,13 +692,11 @@ class Cli:
             ticket_id = response["id"]
             if status_name == T.doing.name or status_name == T.daily.name:
                 print("")
-                lets_continue = input(
-                    f"> Lets move it to code review? [Y/n]: "
-                )
+                lets_continue = input(f"> Lets move it to code review? [Y/n]: ")
                 if "n" not in lets_continue.lower():
                     self.jira.post(
                         f"/rest/api/2/issue/{ticket_id}/transitions",
-                        payload={"transition": {"id": T.code_review.id}}
+                        payload={"transition": {"id": T.code_review.id}},
                     )
 
         open_link(link, press_enter_message=True)
@@ -723,58 +738,77 @@ def copy_to_clipboard(text):
 def remove_characters(line: str, to_remove: List[str]):
     clean_line = line
     for char in to_remove:
-        clean_line = clean_line.replace(char, '')
+        clean_line = clean_line.replace(char, "")
     return clean_line
 
 
-def gum(message: str, items: List[str], action = "choose") -> str:
+def gum(message: str, items: List[str], action="choose") -> str:
     if g_has_gum:
         if action == "filter":
             options = "\n".join(items)
-            result = subprocess.check_output(["bash", '-c', f'echo "{options}" | gum filter'])
+            result = subprocess.check_output(
+                ["bash", "-c", f'echo "{options}" | gum filter']
+            )
             return result.decode().strip()
         else:
-            result = subprocess.run(["gum", action] + items + ["--header", message], stdout=subprocess.PIPE, text=True)
+            result = subprocess.run(
+                ["gum", action] + items + ["--header", message],
+                stdout=subprocess.PIPE,
+                text=True,
+            )
             return result.stdout.strip()
     else:
         questions = [inquirer.List("items", message=message, choices=items)]
         answers = inquirer.prompt(questions)
-        result = answers.get('items') if answers else None
+        result = answers.get("items") if answers else None
         if not answers or not result:
             exit()
         return result
 
 
-
 def jira_to_md(text: str):
     replaceitems = [
-        ('h1.', '#'),
-        ('h2.', '##'),
-        ('h3.', '###'),
-        ('h4.', '####'),
-        ('h5.', '####'),
-        ('----', '      -'),
-        ('---', '    -'),
-        ('--', '  -'),
-        ('****', '      *'),
-        ('***', '    *'),
-        ('**', '  *'),
-        ('{code}', '```'),
-        ('{color:red}', '*'),
-        ('{color}', '*')
+        ("h1.", "#"),
+        ("h2.", "##"),
+        ("h3.", "###"),
+        ("h4.", "####"),
+        ("h5.", "####"),
+        ("----", "      -"),
+        ("---", "    -"),
+        ("--", "  -"),
+        ("****", "      *"),
+        ("***", "    *"),
+        ("**", "  *"),
+        ("{code}", "```"),
+        ("{color:red}", "*"),
+        ("{color}", "*"),
     ]
     output = text
-    for (jira, md) in replaceitems:
+    for jira, md in replaceitems:
         output = output.replace(jira, md)
     return output
 
 
-def pretty_print_ticket(description: str, pr_status: str, points: str, owner: str, summary: str, key: str, epic: str):
+def pretty_print_ticket(
+    description: str,
+    pr_status: str,
+    points: str,
+    owner: str,
+    summary: str,
+    key: str,
+    epic: str,
+):
     if g_has_glow:
         desc_md = jira_to_md(description)
-        subprocess.check_call(["bash", '-c', f"echo '> {key} {pr_status} {points} {owner} {epic}\n> {summary}' | glow"])
+        subprocess.check_call(
+            [
+                "bash",
+                "-c",
+                f"echo '> {key} {pr_status} {points} {owner} {epic}\n> {summary}' | glow",
+            ]
+        )
         subprocess.check_call(["bash", "-c", f"echo '{desc_md}' | glow"])
-        subprocess.check_call(["bash", '-c', f"echo '---' | glow"])
+        subprocess.check_call(["bash", "-c", f"echo '---' | glow"])
     else:
         # for k in r['fields'].keys():
         #   print(f"{k}|| {r['fields'][k]}")
