@@ -329,11 +329,18 @@ class JiraApi:
 
     def get_all_sprints(self):
         sprints = []
-        res = self.get(f"/rest/agile/1.0/board/2704/sprint")
+        # TODO: while loop to fetch all the sprints!
+        res = self.get("/rest/agile/1.0/board/2704/sprint")
         if res is None:
             exit(1)
         sprints = res.get("values")
-        res = self.get(f"/rest/agile/1.0/board/2704/sprint?startAt=50")
+
+        res = self.get("/rest/agile/1.0/board/2704/sprint?startAt=50")
+        if res is None:
+            exit(1)
+        sprints = sprints + res.get("values")
+
+        res = self.get("/rest/agile/1.0/board/2704/sprint?startAt=100")
         if res is None:
             exit(1)
         sprints = sprints + res.get("values")
@@ -553,13 +560,18 @@ class Cli:
         # Todo: Add how
         sprints = self.jira.get_all_sprints()
         active_sprint = [s["name"] for s in sprints if s["state"] == "active"]
+        special_sprints = [':Bugs:', ':Dev Quality:', ':Launchpad:', ':DATA QUALITY:', '-----']
+        for s in sprints:
+            if 'Sprint N + 1' not in s['name']:
+                continue
+            special_sprints = [s['name']] + special_sprints
         choices = [
             sprint["name"]
             for sprint in sprints
-            if sprint["state"] != "closed" and sprint["state"] != "active"
+            if sprint["state"] != "closed" and sprint["state"] != "active" and sprint['name'] not in special_sprints
         ]
         choices.sort(key=lambda x: x)
-        choices = active_sprint + choices
+        choices = active_sprint + special_sprints + choices
         answers = inquirer.prompt(
             [
                 inquirer.Text("userstory", message="What is the user story"),
@@ -589,7 +601,7 @@ class Cli:
             print("to save the board id: `ja -s b:7192`")
             exit()
         res = self.jira.get(
-            f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint?state=active"
+            "/rest/agile/1.0/board/{self.env.jira_board_id}/sprint?state=active"
         )
         if res is None:
             exit(1)
@@ -800,13 +812,11 @@ def pretty_print_ticket(
 ):
     if g_has_glow:
         desc_md = jira_to_md(description)
-        subprocess.check_call(
-            [
-                "bash",
-                "-c",
-                f"echo '> {key} {pr_status} {points} {owner} {epic}\n> {summary}' | glow",
-            ]
-        )
+        subprocess.check_call([
+            "bash",
+            "-c",
+            f"echo '> {key} {pr_status} {points} {owner} {epic}\n> {summary}' | glow",
+        ])
         subprocess.check_call(["bash", "-c", f"echo '{desc_md}' | glow"])
         subprocess.check_call(["bash", "-c", f"echo '---' | glow"])
     else:
