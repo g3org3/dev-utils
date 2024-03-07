@@ -1,4 +1,4 @@
 [flake8]
 max-line-length = 110
-ignore=E111
+ignore=E111,E126
 indent-size = 2

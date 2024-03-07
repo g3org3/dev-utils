@@ -5,6 +5,8 @@ from datetime import datetime
 from emoji import emojize
 from termcolor import colored
 from typing import Optional, Tuple, Dict, List
+import json
+import urllib
 import argparse
 import inquirer
 import os
@@ -199,6 +201,9 @@ def main():
     )
     parser.add_argument(
         "--create", help="Create a new jira ticket", action="store_true"
+    )
+    parser.add_argument(
+        "--search", help="Search jira tickets", action="store_true"
     )
     parser.add_argument("--version", action="version", version="%(prog)s 0.4.1")
     args = parser.parse_args()
@@ -404,6 +409,8 @@ class Cli:
             self.push()
         elif self.args.create:
             self.create_jira_ticket()
+        elif self.args.search:
+            self.search()
         elif self.args.new:
             self.create()
         elif not self.args.verbose:
@@ -553,6 +560,18 @@ class Cli:
         cmd = f"git pull --rebase origin {self.env.github_main_branch}"
         print(f" > {cmd}")
         shell(cmd, err_exit=True)
+
+    def search(self):
+        what = input("query: ")
+        jql = f'project = CFCCON AND summary ~ "{what}" ORDER BY updated DESC'
+        jql = urllib.parse.quote(jql)  # type: ignore
+        data = self.jira.get(f'/rest/api/2/search?jql={jql}')
+        issues = [
+            {"key": i.get('key'), "summary": i.get('fields').get('summary')}
+            for i in data.get('issues')  # type: ignore
+        ]
+        for issue in issues:
+            print(f"{issue.get('key')} - {issue.get('summary')}")
 
     def create_jira_ticket(self):
         # Todo: Add epics
