@@ -620,7 +620,7 @@ class Cli:
             print("to save the board id: `ja -s b:7192`")
             exit()
         res = self.jira.get(
-            "/rest/agile/1.0/board/{self.env.jira_board_id}/sprint?state=active"
+            f"/rest/agile/1.0/board/{self.env.jira_board_id}/sprint?state=active"
         )
         if res is None:
             exit(1)
