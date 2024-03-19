@@ -319,8 +319,53 @@ class JiraApi:
             return None
         return res.json()
 
-    def get_all_epics(self):
-        pass
+    def get_all_epics(self, board_id: str, query: Optional[str] = None):
+        # TODO: make this a while is not last keep fetching
+        res = self.get(f'/rest/agile/1.0/board/{board_id}/epic')
+        if res is None:
+            exit()
+        epics = [
+            f"{epic.get('key')} -- {epic.get('name')}"
+            for epic in res.get('values')
+            # if query is None or query.lower() in epic.get('name').lower()
+        ]
+        res = self.get(f'/rest/agile/1.0/board/{board_id}/epic?startAt=50')
+        if res is None:
+            exit()
+        epics2 = [
+            f"{epic.get('key')} -- {epic.get('name')}"
+            for epic in res.get('values')
+            # if query is None or query.lower() in epic.get('name').lower()
+        ]
+        epics = epics + epics2
+        res = self.get(f'/rest/agile/1.0/board/{board_id}/epic?startAt=100')
+        if res is None:
+            exit()
+        epics2 = [
+            f"{epic.get('key')} -- {epic.get('name')}"
+            for epic in res.get('values')
+            # if query is None or query.lower() in epic.get('name').lower()
+        ]
+        epics = epics + epics2
+        res = self.get(f'/rest/agile/1.0/board/{board_id}/epic?startAt=150')
+        if res is None:
+            exit()
+        epics2 = [
+            f"{epic.get('key')} -- {epic.get('name')}"
+            for epic in res.get('values')
+            # if query is None or query.lower() in epic.get('name').lower()
+        ]
+        epics = epics + epics2
+        epics = [e for e in epics if query is None or query.lower() in e.lower()]
+        epics.sort(key=lambda e: int(e.split('--')[0].split('-')[1].strip()), reverse=True)
+        answers = inquirer.prompt([
+            inquirer.List("epic", message="which epic?", choices=epics),
+        ])
+
+        if answers is None or answers.get('epic') is None:
+            return None
+
+        return answers.get('epic').split('--')[0].strip()  # type: ignore
 
     def create_ticket(self, summary, sprint_id):
         payload = {
@@ -332,20 +377,20 @@ class JiraApi:
 
         return self.post("/rest/inline-create/1.0/issue", payload)
 
-    def get_all_sprints(self):
+    def get_all_sprints(self, board_id: str):
         sprints = []
         # TODO: while loop to fetch all the sprints!
-        res = self.get("/rest/agile/1.0/board/2704/sprint")
+        res = self.get(f"/rest/agile/1.0/board/{board_id}/sprint")
         if res is None:
             exit(1)
         sprints = res.get("values")
 
-        res = self.get("/rest/agile/1.0/board/2704/sprint?startAt=50")
+        res = self.get(f"/rest/agile/1.0/board/{board_id}/sprint?startAt=50")
         if res is None:
             exit(1)
         sprints = sprints + res.get("values")
 
-        res = self.get("/rest/agile/1.0/board/2704/sprint?startAt=100")
+        res = self.get(f"/rest/agile/1.0/board/{board_id}/sprint?startAt=100")
         if res is None:
             exit(1)
         sprints = sprints + res.get("values")
@@ -361,7 +406,16 @@ class JiraApi:
             headers=self.headers,
             verify=False,
         )
-        if res.status_code != 200:
+        if res.status_code == 404:
+            print(
+                colored(
+                    f"\n# Tried to call jira but we received {res.status_code}",
+                    "yellow",
+                )
+            )
+            print()
+            return None
+        elif res.status_code != 200:
             if self.args.verbose:
                 print(colored(res.text, "red"))
             print(
@@ -562,22 +616,82 @@ class Cli:
         shell(cmd, err_exit=True)
 
     def search(self):
-        what = input("query: ")
-        jql = f'project = CFCCON AND summary ~ "{what}" ORDER BY updated DESC'
+        summary = input("title contains: ")
+        epic_q = input("epic contains: ")
+        epic_link = None
+        if epic_q:
+            epic_link = self.jira.get_all_epics(self.env.jira_board_id, epic_q)
+        summary_filter = f'summary !~ "{summary[1:].lower()}"' if summary != '' and '!' == summary[0] else f'summary ~ "{summary}"'
+        jql = f'project = CFCCON AND {summary_filter} ORDER BY updated DESC'
+        if epic_link:
+            if summary:
+                jql = (
+                    f'project = CFCCON '
+                    f'AND {summary_filter}'
+                    f'AND "Epic Link" = "{epic_link}" '
+                    f'ORDER BY updated DESC'
+                )
+            else:
+                jql = (
+                    f'project = CFCCON '
+                    f'AND "Epic Link" = "{epic_link}" '
+                    f'ORDER BY updated DESC'
+                )
+        # os.system('clear')
+        print()
+        print(f"jql: {jql}")
+        print()
         jql = urllib.parse.quote(jql)  # type: ignore
         data = self.jira.get(f'/rest/api/2/search?jql={jql}')
-        issues = [
-            {"key": i.get('key'), "summary": i.get('fields').get('summary')}
-            for i in data.get('issues')  # type: ignore
-        ]
+        if data is None:
+            exit()
+
+        points = "points".ljust(7, ' ')
+        summary = "summary"
+        status = "status".ljust(13, ' ')
+        key = "key".ljust(13, ' ')
+        who = "assignee".ljust(20, ' ')
+        print(f"{status} | {key} | {points} | {who} | {summary}")
+
+        points = "---".ljust(7, ' ')
+        summary = "---"
+        status = "---".ljust(13, ' ')
+        key = "---".ljust(13, ' ')
+        who = "---".ljust(20, ' ')
+        print(f"{status} | {key} | {points} | {who} | {summary}")
+
+        issues = data.get('issues')
+        order = {
+            "Rejected": 0,
+            "To Do": 1,
+            "To Develop": 2,
+            "In Progress": 3,
+            "In Review": 4,
+            "In Test": 5,
+            "Done": 6,
+        }
+        issues.sort(key=lambda x: order.get(x.get('fields').get('status').get('name')))
+        total_points = 0.0
         for issue in issues:
-            print(f"{issue.get('key')} - {issue.get('summary')}")
+            points = str(issue.get('fields').get('customfield_10006') or "0.0").ljust(7, ' ')
+            p = float(points)
+            total_points += p
+            summary = issue.get('fields').get('summary')
+            status = issue.get('fields').get('status').get('name').ljust(13, ' ')
+            key = issue.get('key').ljust(13, ' ')
+            who = issue.get('fields').get('assignee').get('displayName') if issue.get('fields').get('assignee') else '-'
+            who = who.ljust(20, ' ')
+            print(f"{status} | {key} | {points} | {who} | {summary}")
+
+        print()
+        print(f"total points: {total_points}")
+        print(f"ref: https://jiradbg.deutsche-boerse.de/issues/?jql={jql}")
 
     def create_jira_ticket(self):
         # Todo: Add epics
         # Todo: Add acceptance criteria
         # Todo: Add how
-        sprints = self.jira.get_all_sprints()
+        sprints = self.jira.get_all_sprints(self.env.jira_board_id)
         active_sprint = [s["name"] for s in sprints if s["state"] == "active"]
         special_sprints = [':Bugs:', ':Dev Quality:', ':Launchpad:', ':DATA QUALITY:', '-----']
         for s in sprints:
