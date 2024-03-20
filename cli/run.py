@@ -621,13 +621,17 @@ class Cli:
         epic_link = None
         if epic_q:
             epic_link = self.jira.get_all_epics(self.env.jira_board_id, epic_q)
-        summary_filter = f'summary !~ "{summary[1:].lower()}"' if summary != '' and '!' == summary[0] else f'summary ~ "{summary}"'
+        summary_filter = (
+            f'summary !~ "{summary[1:]}"'
+            if summary and summary != '' and '!' == summary[0]
+            else f'summary ~ "{summary}"'
+        )
         jql = f'project = CFCCON AND {summary_filter} ORDER BY updated DESC'
         if epic_link:
             if summary:
                 jql = (
                     f'project = CFCCON '
-                    f'AND {summary_filter}'
+                    f'AND {summary_filter} '
                     f'AND "Epic Link" = "{epic_link}" '
                     f'ORDER BY updated DESC'
                 )
@@ -646,18 +650,18 @@ class Cli:
         if data is None:
             exit()
 
-        points = "points".ljust(7, ' ')
+        points = "points".ljust(6, ' ')
         summary = "summary"
         status = "status".ljust(13, ' ')
         key = "key".ljust(13, ' ')
         who = "assignee".ljust(20, ' ')
         print(f"{status} | {key} | {points} | {who} | {summary}")
 
-        points = "---".ljust(7, ' ')
+        points = "---".ljust(6, '-')
         summary = "---"
-        status = "---".ljust(13, ' ')
-        key = "---".ljust(13, ' ')
-        who = "---".ljust(20, ' ')
+        status = "---".ljust(13, '-')
+        key = "---".ljust(13, '-')
+        who = "---".ljust(20, '-')
         print(f"{status} | {key} | {points} | {who} | {summary}")
 
         issues = data.get('issues')
@@ -673,14 +677,14 @@ class Cli:
         issues.sort(key=lambda x: order.get(x.get('fields').get('status').get('name')))
         total_points = 0.0
         for issue in issues:
-            points = str(issue.get('fields').get('customfield_10006') or "0.0").ljust(7, ' ')
+            points = str(issue.get('fields').get('customfield_10006') or "0.0").ljust(6, ' ')
             p = float(points)
             total_points += p
-            summary = issue.get('fields').get('summary')
+            summary = issue.get('fields').get('summary')[0:107]
             status = issue.get('fields').get('status').get('name').ljust(13, ' ')
             key = issue.get('key').ljust(13, ' ')
             who = issue.get('fields').get('assignee').get('displayName') if issue.get('fields').get('assignee') else '-'
-            who = who.ljust(20, ' ')
+            who = who.ljust(20, ' ')[0:20]
             print(f"{status} | {key} | {points} | {who} | {summary}")
 
         print()
