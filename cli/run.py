@@ -658,7 +658,7 @@ class Cli:
         print(f"{status} | {key} | {points} | {who} | {summary}")
 
         points = "---".ljust(6, '-')
-        summary = "---"
+        summary = "---".ljust(107, '-')
         status = "---".ljust(13, '-')
         key = "---".ljust(13, '-')
         who = "---".ljust(20, '-')
@@ -680,7 +680,7 @@ class Cli:
             points = str(issue.get('fields').get('customfield_10006') or "0.0").ljust(6, ' ')
             p = float(points)
             total_points += p
-            summary = issue.get('fields').get('summary')[0:107]
+            summary = issue.get('fields').get('summary')[0:107].ljust(107, '.')
             status = issue.get('fields').get('status').get('name').ljust(13, ' ')
             key = issue.get('key').ljust(13, ' ')
             who = issue.get('fields').get('assignee').get('displayName') if issue.get('fields').get('assignee') else '-'
