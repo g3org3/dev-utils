@@ -618,6 +618,7 @@ class Cli:
     def search(self):
         summary = input("title contains: ")
         epic_q = input("epic contains: ")
+        show_rejected = "y" in input("show rejected [N/y]: ").lower()
         epic_link = None
         if epic_q:
             epic_link = self.jira.get_all_epics(self.env.jira_board_id, epic_q)
@@ -677,18 +678,25 @@ class Cli:
         issues.sort(key=lambda x: order.get(x.get('fields').get('status').get('name')))
         total_points = 0.0
         for issue in issues:
+            status = issue.get('fields').get('status').get('name').ljust(13, ' ')
+            if not show_rejected and status.strip() == 'Rejected':
+                continue
             points = str(issue.get('fields').get('customfield_10006') or "0.0").ljust(6, ' ')
             p = float(points)
             total_points += p
             summary = issue.get('fields').get('summary')[0:107].ljust(107, '.')
-            status = issue.get('fields').get('status').get('name').ljust(13, ' ')
             key = issue.get('key').ljust(13, ' ')
-            who = issue.get('fields').get('assignee').get('displayName') if issue.get('fields').get('assignee') else '-'
+            who = (
+                issue.get('fields').get('assignee').get('displayName')
+                if issue.get('fields').get('assignee')
+                else '-'
+            )
             who = who.ljust(20, ' ')[0:20]
             print(f"{status} | {key} | {points} | {who} | {summary}")
 
         print()
         print(f"total points: {total_points}")
+        print()
         print(f"ref: https://jiradbg.deutsche-boerse.de/issues/?jql={jql}")
 
     def create_jira_ticket(self):
