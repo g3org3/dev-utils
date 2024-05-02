@@ -202,9 +202,7 @@ def main():
     parser.add_argument(
         "--create", help="Create a new jira ticket", action="store_true"
     )
-    parser.add_argument(
-        "--search", help="Search jira tickets", action="store_true"
-    )
+    parser.add_argument("--search", help="Search jira tickets", action="store_true")
     parser.add_argument("--version", action="version", version="%(prog)s 0.4.1")
     args = parser.parse_args()
     env = get_env(args)
@@ -321,51 +319,55 @@ class JiraApi:
 
     def get_all_epics(self, board_id: str, query: Optional[str] = None):
         # TODO: make this a while is not last keep fetching
-        res = self.get(f'/rest/agile/1.0/board/{board_id}/epic')
+        res = self.get(f"/rest/agile/1.0/board/{board_id}/epic")
         if res is None:
             exit()
         epics = [
             f"{epic.get('key')} -- {epic.get('name')}"
-            for epic in res.get('values')
+            for epic in res.get("values")
             # if query is None or query.lower() in epic.get('name').lower()
         ]
-        res = self.get(f'/rest/agile/1.0/board/{board_id}/epic?startAt=50')
+        res = self.get(f"/rest/agile/1.0/board/{board_id}/epic?startAt=50")
         if res is None:
             exit()
         epics2 = [
             f"{epic.get('key')} -- {epic.get('name')}"
-            for epic in res.get('values')
-            # if query is None or query.lower() in epic.get('name').lower()
-        ]
-        epics = epics + epics2
-        res = self.get(f'/rest/agile/1.0/board/{board_id}/epic?startAt=100')
-        if res is None:
-            exit()
-        epics2 = [
-            f"{epic.get('key')} -- {epic.get('name')}"
-            for epic in res.get('values')
+            for epic in res.get("values")
             # if query is None or query.lower() in epic.get('name').lower()
         ]
         epics = epics + epics2
-        res = self.get(f'/rest/agile/1.0/board/{board_id}/epic?startAt=150')
+        res = self.get(f"/rest/agile/1.0/board/{board_id}/epic?startAt=100")
         if res is None:
             exit()
         epics2 = [
             f"{epic.get('key')} -- {epic.get('name')}"
-            for epic in res.get('values')
+            for epic in res.get("values")
+            # if query is None or query.lower() in epic.get('name').lower()
+        ]
+        epics = epics + epics2
+        res = self.get(f"/rest/agile/1.0/board/{board_id}/epic?startAt=150")
+        if res is None:
+            exit()
+        epics2 = [
+            f"{epic.get('key')} -- {epic.get('name')}"
+            for epic in res.get("values")
             # if query is None or query.lower() in epic.get('name').lower()
         ]
         epics = epics + epics2
         epics = [e for e in epics if query is None or query.lower() in e.lower()]
-        epics.sort(key=lambda e: int(e.split('--')[0].split('-')[1].strip()), reverse=True)
-        answers = inquirer.prompt([
-            inquirer.List("epic", message="which epic?", choices=epics),
-        ])
+        epics.sort(
+            key=lambda e: int(e.split("--")[0].split("-")[1].strip()), reverse=True
+        )
+        answers = inquirer.prompt(
+            [
+                inquirer.List("epic", message="which epic?", choices=epics),
+            ]
+        )
 
-        if answers is None or answers.get('epic') is None:
+        if answers is None or answers.get("epic") is None:
             return None
 
-        return answers.get('epic').split('--')[0].strip()  # type: ignore
+        return answers.get("epic").split("--")[0].strip()  # type: ignore
 
     def create_ticket(self, summary, sprint_id):
         payload = {
@@ -624,48 +626,48 @@ class Cli:
             epic_link = self.jira.get_all_epics(self.env.jira_board_id, epic_q)
         summary_filter = (
             f'summary !~ "{summary[1:]}"'
-            if summary and summary != '' and '!' == summary[0]
+            if summary and summary != "" and "!" == summary[0]
             else f'summary ~ "{summary}"'
         )
-        jql = f'project = CFCCON AND {summary_filter} ORDER BY updated DESC'
+        jql = f"project = CFCCON AND {summary_filter} ORDER BY updated DESC"
         if epic_link:
             if summary:
                 jql = (
-                    f'project = CFCCON '
-                    f'AND {summary_filter} '
+                    f"project = CFCCON "
+                    f"AND {summary_filter} "
                     f'AND "Epic Link" = "{epic_link}" '
-                    f'ORDER BY updated DESC'
+                    f"ORDER BY updated DESC"
                 )
             else:
                 jql = (
-                    f'project = CFCCON '
+                    f"project = CFCCON "
                     f'AND "Epic Link" = "{epic_link}" '
-                    f'ORDER BY updated DESC'
+                    f"ORDER BY updated DESC"
                 )
         # os.system('clear')
         print()
         print(f"jql: {jql}")
         print()
         jql = urllib.parse.quote(jql)  # type: ignore
-        data = self.jira.get(f'/rest/api/2/search?jql={jql}')
+        data = self.jira.get(f"/rest/api/2/search?jql={jql}")
         if data is None:
             exit()
 
-        points = "points".ljust(6, ' ')
+        points = "points".ljust(6, " ")
         summary = "summary"
-        status = "status".ljust(13, ' ')
-        key = "key".ljust(13, ' ')
-        who = "assignee".ljust(20, ' ')
+        status = "status".ljust(13, " ")
+        key = "key".ljust(13, " ")
+        who = "assignee".ljust(20, " ")
         print(f"{status} | {key} | {points} | {who} | {summary}")
 
-        points = "---".ljust(6, '-')
-        summary = "---".ljust(107, '-')
-        status = "---".ljust(13, '-')
-        key = "---".ljust(13, '-')
-        who = "---".ljust(20, '-')
+        points = "---".ljust(6, "-")
+        summary = "---".ljust(107, "-")
+        status = "---".ljust(13, "-")
+        key = "---".ljust(13, "-")
+        who = "---".ljust(20, "-")
         print(f"{status} | {key} | {points} | {who} | {summary}")
 
-        issues = data.get('issues')
+        issues = data.get("issues")
         order = {
             "Rejected": 0,
             "To Do": 1,
@@ -675,29 +677,31 @@ class Cli:
             "In Test": 5,
             "Done": 6,
         }
-        issues.sort(key=lambda x: order.get(x.get('fields').get('status').get('name')))
+        issues.sort(key=lambda x: order.get(x.get("fields").get("status").get("name")))
         total_points = 0.0
         for issue in issues:
-            status = issue.get('fields').get('status').get('name').ljust(13, ' ')
-            if not show_rejected and status.strip() == 'Rejected':
+            status = issue.get("fields").get("status").get("name").ljust(13, " ")
+            if not show_rejected and status.strip() == "Rejected":
                 continue
-            points = str(issue.get('fields').get('customfield_10006') or "0.0").ljust(6, ' ')
+            points = str(issue.get("fields").get("customfield_10006") or "0.0").ljust(
+                6, " "
+            )
             p = float(points)
             total_points += p
-            summary = issue.get('fields').get('summary')[0:107].ljust(107, '.')
-            key = issue.get('key').ljust(13, ' ')
+            summary = issue.get("fields").get("summary")[0:107].ljust(107, ".")
+            key = issue.get("key").ljust(13, " ")
             who = (
-                issue.get('fields').get('assignee').get('displayName')
-                if issue.get('fields').get('assignee')
-                else '-'
+                issue.get("fields").get("assignee").get("displayName")
+                if issue.get("fields").get("assignee")
+                else "-"
             )
-            who = who.ljust(20, ' ')[0:20]
+            who = who.ljust(20, " ")[0:20]
             print(f"{status} | {key} | {points} | {who} | {summary}")
 
         print()
         print(f"total points: {total_points}")
         print()
-        print(f"ref: https://jiradbg.deutsche-boerse.de/issues/?jql={jql}")
+        print(f"ref: https://{self.env.jira_host}/issues/?jql={jql}")
 
     def create_jira_ticket(self):
         # Todo: Add epics
@@ -705,15 +709,23 @@ class Cli:
         # Todo: Add how
         sprints = self.jira.get_all_sprints(self.env.jira_board_id)
         active_sprint = [s["name"] for s in sprints if s["state"] == "active"]
-        special_sprints = [':Bugs:', ':Dev Quality:', ':Launchpad:', ':DATA QUALITY:', '-----']
+        special_sprints = [
+            ":Bugs:",
+            ":Dev Quality:",
+            ":Launchpad:",
+            ":DATA QUALITY:",
+            "-----",
+        ]
         for s in sprints:
-            if 'Sprint N + 1' not in s['name']:
+            if "Sprint N + 1" not in s["name"]:
                 continue
-            special_sprints = [s['name']] + special_sprints
+            special_sprints = [s["name"]] + special_sprints
         choices = [
             sprint["name"]
             for sprint in sprints
-            if sprint["state"] != "closed" and sprint["state"] != "active" and sprint['name'] not in special_sprints
+            if sprint["state"] != "closed"
+            and sprint["state"] != "active"
+            and sprint["name"] not in special_sprints
         ]
         choices.sort(key=lambda x: x)
         choices = active_sprint + special_sprints + choices
@@ -737,7 +749,7 @@ class Cli:
             exit(1)
         key = res.get("issue").get("issueKey")
         print("Created ticket!")
-        print(f"https://jiradbg.deutsche-boerse.de/browse/{key}")
+        print(f"https://{self.env.jira_host}/browse/{key}")
 
     def create(self):
         if not self.env.jira_user_id or not self.env.jira_board_id:
@@ -957,11 +969,13 @@ def pretty_print_ticket(
 ):
     if g_has_glow:
         desc_md = jira_to_md(description)
-        subprocess.check_call([
-            "bash",
-            "-c",
-            f"echo '> {key} {pr_status} {points} {owner} {epic}\n> {summary}' | glow",
-        ])
+        subprocess.check_call(
+            [
+                "bash",
+                "-c",
+                f"echo '> {key} {pr_status} {points} {owner} {epic}\n> {summary}' | glow",
+            ]
+        )
         subprocess.check_call(["bash", "-c", f"echo '{desc_md}' | glow"])
         subprocess.check_call(["bash", "-c", f"echo '---' | glow"])
     else:
