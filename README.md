@@ -16,7 +16,7 @@
 
 ```sh
 echo "alias devutils='cd ~/code/dev-utils'" >> ~/.zshrc
-echo "alias ja='~/code/dev-utils/.direnv/python-3.9.7/bin/python ~/code/dev-utils/bin/ja'" >> ~/.zshrc
+echo "alias ja='~/code/dev-utils/.direnv/python-3.9/bin/python ~/code/dev-utils/bin/ja'" >> ~/.zshrc
 ```
 
 ### 2.2 Install python version
