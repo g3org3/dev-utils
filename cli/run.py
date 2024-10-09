@@ -80,6 +80,10 @@ class Env:
         return self.environment.get("jira").get("board_id")
 
     @property
+    def jira_active_sprint_id(self):
+        return self.environment.get("jira").get("active_sprint_id")
+
+    @property
     def github_host(self):
         return self.environment.get("github").get("host")
 
@@ -119,6 +123,9 @@ class Env:
     def set_github_main_branch(self, value):
         self.environment["github"]["main_branch"] = value
 
+    def set_active_sprint_id(self, value):
+        self.environment["jira"]["active_sprint_id"] = value
+
     def __str__(self):
         return yaml.dump(self.environment, Dumper=yaml.Dumper, sort_keys=False)
 
@@ -137,6 +144,7 @@ def get_env(args: Namespace) -> Env:
             "project_key": "",
             "user_id": "",
             "board_id": "",
+            "active_sprint_id": "",
         },
         "github": {"host": "github.com", "main_branch": "main", "repo": ""},
     }
@@ -506,10 +514,11 @@ class Cli:
                 print(url)
             os.system(f'xdg-open "{url}"')
 
-    def save_env(self):
+    def save_env(self, print_update_message=True):
         with open(GLOBAL_CONFIG_PATH, "w") as fh:
             fh.write(f"{self.env}")
-            print(f"update rc [{colored('done', 'green')}]")
+            if (print_update_message):
+                print(f"update rc [{colored('done', 'green')}]")
 
     def save_session(self):
         if "github.main_branch=" in self.args.save_session:
@@ -756,6 +765,14 @@ class Cli:
 
     def select_active_sprint(self, jira_response):
         sprints = jira_response["values"]
+        previous_selected_sprint_id = self.env.jira_active_sprint_id
+
+        previous_sprint_idx = next(
+            (i for i, item in enumerate(sprints) if item["id"] == previous_selected_sprint_id), -1
+        )
+        if (previous_sprint_idx != -1):
+            return previous_sprint_idx
+
         sprint_choises = [
             f"{idx} -- {sprint['name']}" for idx, sprint in enumerate(sprints)
         ]
@@ -764,7 +781,12 @@ class Cli:
         ]
         answers = inquirer.prompt(questions)
         selected_sprint = str(answers.get("sprint"))
-        return int(selected_sprint.split(" -- ")[0])
+        selected_sprint_idx = int(selected_sprint.split(" -- ")[0])
+        selected_sprint_id = sprints[selected_sprint_idx]["id"]
+        self.env.set_active_sprint_id(selected_sprint_id)
+        self.save_env(print_update_message=False)
+
+        return selected_sprint_idx
 
     def create(self):
         if not self.env.jira_user_id or not self.env.jira_board_id:
