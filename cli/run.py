@@ -751,6 +751,18 @@ class Cli:
         print("Created ticket!")
         print(f"https://{self.env.jira_host}/browse/{key}")
 
+    def select_active_sprint(self, jira_response):
+        sprints = jira_response["values"]
+        sprint_choises = [
+            f"{idx} -- {sprint['name']}" for idx, sprint in enumerate(sprints)
+        ]
+        questions = [
+            inquirer.List("sprint", message="Which sprint?", choices=sprint_choises),
+        ]
+        answers = inquirer.prompt(questions)
+        selected_sprint = str(answers.get("sprint"))
+        return int(selected_sprint.split(" -- ")[0])
+
     def create(self):
         if not self.env.jira_user_id or not self.env.jira_board_id:
             print("you are missing either the user_id and/or the jira_board_id")
@@ -762,7 +774,8 @@ class Cli:
         )
         if res is None:
             exit(1)
-        sprint = res["values"][0]
+        sprint_idx = self.select_active_sprint(res)
+        sprint = res["values"][sprint_idx]
         sprint_id = sprint.get("id")
         sprint_name = sprint.get("name")
         sprint_number = sprint_name.split(" ")[1]
