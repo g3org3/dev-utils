@@ -506,6 +506,11 @@ class Cli:
                 print(url)
             os.system(f'xdg-open "{url}"')
 
+    def save_env(self):
+        with open(GLOBAL_CONFIG_PATH, "w") as fh:
+            fh.write(f"{self.env}")
+            print(f"update rc [{colored('done', 'green')}]")
+
     def save_session(self):
         if "github.main_branch=" in self.args.save_session:
             self.env.set_github_main_branch(self.args.save_session.split("=")[1])
@@ -517,9 +522,7 @@ class Cli:
             self.env.set_remember_me(self.args.save_session)
         else:
             self.env.set_session(self.args.save_session)
-        with open(GLOBAL_CONFIG_PATH, "w") as fh:
-            fh.write(f"{self.env}")
-            print(f"update rc [{colored('done', 'green')}]")
+        self.save_env()
 
     def desc(self):
         (branch, ticket) = get_ticket_from_branch(self.args, self.env)
