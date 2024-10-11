@@ -802,8 +802,12 @@ class Cli:
         sprint_idx = self.select_active_sprint(res)
         sprint = res["values"][sprint_idx]
         sprint_id = sprint.get("id")
+
         sprint_name = sprint.get("name")
-        sprint_number = sprint_name.split(" ")[1]
+        sprint_number_regex = r"[1-9]+"
+        sprint_number_pattern = re.compile(sprint_number_regex)
+        sprint_number = sprint_number_pattern.search(sprint_name).group()
+
         jql = (
             "project = CFCCON "
             'AND status = "To Develop" '
