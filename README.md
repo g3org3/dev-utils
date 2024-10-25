@@ -39,7 +39,7 @@ cd ~/code/dev-utils
 
 ```sh
 direnv allow
-pip install -r requirements.txt
+pip install --upgrade pip; pip install -r requirements.txt
 ```
 
 ## 3. Usage
