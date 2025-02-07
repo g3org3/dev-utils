@@ -211,7 +211,7 @@ def main():
         "--create", help="Create a new jira ticket", action="store_true"
     )
     parser.add_argument("--search", help="Search jira tickets", action="store_true")
-    parser.add_argument("--version", action="version", version="%(prog)s 0.4.1")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.4.2")
     args = parser.parse_args()
     env = get_env(args)
     jira = JiraApi(env, args)
