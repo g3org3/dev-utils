@@ -388,22 +388,21 @@ class JiraApi:
         return self.post("/rest/inline-create/1.0/issue", payload)
 
     def get_all_sprints(self, board_id: str):
-        sprints = []
-        # TODO: while loop to fetch all the sprints!
-        res = self.get(f"/rest/agile/1.0/board/{board_id}/sprint")
-        if res is None:
-            exit(1)
+        qs = {}
+        query = ""
+        res = self.get(f"/rest/agile/1.0/board/{board_id}/sprint?{query}")
+        assert res is not None
         sprints = res.get("values")
 
-        res = self.get(f"/rest/agile/1.0/board/{board_id}/sprint?startAt=50")
-        if res is None:
-            exit(1)
-        sprints = sprints + res.get("values")
+        startAt = 0
 
-        res = self.get(f"/rest/agile/1.0/board/{board_id}/sprint?startAt=100")
-        if res is None:
-            exit(1)
-        sprints = sprints + res.get("values")
+        while res and not res["isLast"]:
+            startAt += 50
+            qs["startAt"] = str(startAt)
+            query = "&".join([f"{k}={v}" for (k, v) in qs.items()])
+            res = self.get(f"/rest/agile/1.0/board/{board_id}/sprint?{query}")
+            assert res is not None
+            sprints = sprints + res.get("values")
 
         return sprints
 
@@ -517,7 +516,7 @@ class Cli:
     def save_env(self, print_update_message=True):
         with open(GLOBAL_CONFIG_PATH, "w") as fh:
             fh.write(f"{self.env}")
-            if (print_update_message):
+            if print_update_message:
                 print(f"update rc [{colored('done', 'green')}]")
 
     def save_session(self):
@@ -575,13 +574,14 @@ class Cli:
 
         for c in comments["comments"]:
             display_name = c["author"]["displayName"]
-            body = c["body"].replace('"', "").replace("'", "").strip()
+            # body = c["body"].replace('"', "").replace("'", "").strip()
             updated = datetime.strptime(
                 c["updated"], "%Y-%m-%dT%H:%M:%S.%f%z"
             ).strftime("%Y-%m-%d %H:%M %z")
             print(f'{colored(updated, "blue")} {colored(display_name, "yellow")}')
-            llines = [line for line in body.split("\n") if line and line.strip() != ""]
-            print("> " + "> ".join(llines))
+            # llines = [line for line in body.split("\n") if line and line.strip() != ""]
+            # print("> " + "> ".join(llines))
+            print(c["body"])
             print("")
 
     def branch(self):
@@ -716,9 +716,9 @@ class Cli:
         print(f"ref: https://{self.env.jira_host}/issues/?jql={jql}")
 
     def create_jira_ticket(self):
-        # Todo: Add epics
-        # Todo: Add acceptance criteria
-        # Todo: Add how
+        # TODO: Add epics
+        # TODO: Add acceptance criteria
+        # TODO: Add how
         sprints = self.jira.get_all_sprints(self.env.jira_board_id)
         active_sprint = [s["name"] for s in sprints if s["state"] == "active"]
         special_sprints = [
@@ -768,9 +768,14 @@ class Cli:
         previous_selected_sprint_id = self.env.jira_active_sprint_id
 
         previous_sprint_idx = next(
-            (i for i, item in enumerate(sprints) if item["id"] == previous_selected_sprint_id), -1
+            (
+                i
+                for i, item in enumerate(sprints)
+                if item["id"] == previous_selected_sprint_id
+            ),
+            -1,
         )
-        if (previous_sprint_idx != -1):
+        if previous_sprint_idx != -1:
             return previous_sprint_idx
 
         sprint_choises = [
