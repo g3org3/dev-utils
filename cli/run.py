@@ -804,7 +804,7 @@ class Cli:
         sprint_id = sprint.get("id")
 
         sprint_name = sprint.get("name")
-        sprint_number_regex = r"[1-9]+"
+        sprint_number_regex = r"[0-9]+"
         sprint_number_pattern = re.compile(sprint_number_regex)
         sprint_number = sprint_number_pattern.search(sprint_name).group()
 
