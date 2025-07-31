@@ -1,8 +1,6 @@
 #!/bin/bash
-
-alias l=ls\ -lh
-alias la=ls\ -lAh
-
+# alias l=ls\ -lh
+# alias la=ls\ -lAh
 
 ## Git
 alias gis=git\ status
@@ -14,10 +12,10 @@ alias pull=git\ pull
 alias fetch=git\ fetch
 alias undo-commit="git reset --soft HEAD~1"
 alias glog="git log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
-
+alias lg='lazygit'
 
 ## Docker
-alias dc=docker-compose
+alias dc='docker compose'
 
 
 ## Extras
@@ -25,53 +23,13 @@ alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo
 
 
 ## Specific for this repo
-alias ja='~/code/dev-utils/.direnv/python-3.9.7/bin/python ~/code/dev-utils/bin/ja'
-alias cddotfiles=cd\ ~/.dotfiles
+alias ja='~/code/dev-utils/.direnv/python-3.11/bin/python ~/code/dev-utils/bin/ja'
 
 
 ## Functions
-cs() {
-	DIR=${1:-.}
-	LEVEL=${2:-1}
-  cd "$DIR" && clear && echo $(pwd) && tree -L "$LEVEL";
-}
-
-back() {
-	LEVEL=${1:-1}
-	cd .. && clear && tree -L "$LEVEL";
-}
-
 count_commits() {
 	BRANCH=${1:-'master'}
 	git rev-list "$BRANCH".. --count
-}
-
-copy() {
-	xclip -i -selection clipboard $1;
-}
-
-function cd() {
-  builtin cd "$@";
-
-  if [ -f .env ]; then
-    pwd=$(pwd)
-
-    if [ -f example.env ]; then
-      exampledotenv=$(cat example.env | grep = | sed s.=.\ .g | awk '{print $1}')
-      dotenv=$(cat .env | grep = | sed s.=.\ .g | awk '{print $1}')
-      diffs=`diff <(echo "$exampledotenv") <(echo "$dotenv") -q`
-
-      if [ -n "$diffs" ]; then
-        echo -e "\n\e[31myour .env doesn't match with the example.env\nmake sure is up to date\e[0m"
-      fi
-    fi
-
-    #echo "ja: loading $pwd/.env";
-    #export $(cat .env | grep "=" | xargs)
-
-    #vars=$(cat .env | grep = | sed s.=.\ .g | awk '{print $1}' | sed -z 's/\n/\ +/g')
-    #echo "ja: export +${vars}";
-  fi
 }
 
 alias debt='grep --exclude-dir={.db-backup,debt.js,coverage,.azurite-data,.db-data,.db-mysql-matomo-data,.direnv,.git,.matomo-html,.sonarqube-data,bkp,build,Makefile,node_modules,target} -rnw ~/code/cs.cfc_connect -e "@debt"'
